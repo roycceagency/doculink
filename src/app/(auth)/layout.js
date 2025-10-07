@@ -1,8 +1,8 @@
-// app/(auth)/layout.js
+// src/app/(auth)/layout.js
 
 export default function AuthLayout({ children }) {
   return (
-    <main className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950 p-4">
+    <main className="flex min-h-screen w-full items-center justify-center bg-[#f1f5f9]">
       {children}
     </main>
   );

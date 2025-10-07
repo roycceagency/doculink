@@ -1,18 +1,15 @@
-// app/(dashboard)/layout.js
+// src/app/(dashboard)/layout.js
 
-import { Header } from "@/components/dashboard/Header";
-import { Sidebar } from "@/components/dashboard/Sidebar";
+import Sidebar from "@/components/dashboard/Sidebar";
 
 export default function DashboardLayout({ children }) {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-gray-100/40 dark:bg-gray-800/40">
+    <div className="flex min-h-screen w-full bg-[#F8FAFC]">
       <Sidebar />
-      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-        <Header />
-        <main className="flex-1 gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 flex flex-col">
+        {/* 'children' representa a página inteira, que agora inclui seu próprio Header */}
+        {children}
+      </main>
     </div>
   );
 }
