@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card'; // Importe o Card
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import api from '@/lib/api'; // <--- 1. IMPORTANTE: Importar a API
 
 import Modal_SelectSigners from './Modal_SelectSigners';
 import Modal_CreateSigner from './Modal_CreateSigner';
@@ -22,13 +23,34 @@ export default function Step2_AddSigners({ onNext, onBack, signers, setSigners }
   const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
-  const addSigners = (newContacts) => {
-    // ... (lógica de addSigners permanece a mesma)
+  // Função auxiliar para adicionar visualmente na lista (usada tanto pelo Select quanto pelo Create)
+  const addSignersToList = (newContacts) => {
     const contactsArray = Array.isArray(newContacts) ? newContacts : [newContacts];
+    
     const signersToAdd = contactsArray
       .filter(contact => !signers.some(existing => existing.email.toLowerCase() === contact.email.toLowerCase()))
-      .map(contact => ({ ...contact, qualification: 'Assinar', authMethod: 'Whatsapp' }));
+      .map(contact => ({ 
+        ...contact, 
+        qualification: 'Assinar', 
+        authMethod: 'Whatsapp' 
+      }));
+      
     setSigners(prev => [...prev, ...signersToAdd]);
+  };
+
+  // <--- 2. NOVA FUNÇÃO: Salva no banco de dados E DEPOIS adiciona na lista
+  const handleSaveNewSigner = async (formData) => {
+    try {
+      // Faz a chamada para a API para salvar o contato permanentemente
+      const response = await api.post('/contacts', formData);
+      
+      // Adiciona o contato retornado pela API (que agora tem ID) na lista visual
+      addSignersToList(response.data);
+      
+    } catch (error) {
+      // Repassa o erro para que o Modal possa exibir a mensagem vermelha
+      throw error; 
+    }
   };
 
   const removeSigner = (emailToRemove) => {
@@ -36,7 +58,6 @@ export default function Step2_AddSigners({ onNext, onBack, signers, setSigners }
   };
 
   const updateSignerField = (email, field, value) => {
-    // ... (lógica de updateSignerField permanece a mesma)
     const newSigners = signers.map(signer => {
       if (signer.email.toLowerCase() === email.toLowerCase()) {
         return { ...signer, [field]: value };
@@ -64,9 +85,7 @@ export default function Step2_AddSigners({ onNext, onBack, signers, setSigners }
 
         {signers.length > 0 && (
           <div>
-            {/* --- INÍCIO DA LÓGICA RESPONSIVA --- */}
-            
-            {/* 1. VISÃO DE TABELA PARA TELAS MÉDIAS E GRANDES (md:) */}
+            {/* 1. VISÃO DE TABELA PARA TELAS MÉDIAS E GRANDES */}
             <div className="hidden md:block border rounded-lg">
               <Table>
                 <TableHeader>
@@ -108,7 +127,7 @@ export default function Step2_AddSigners({ onNext, onBack, signers, setSigners }
               </Table>
             </div>
 
-            {/* 2. VISÃO DE CARDS PARA TELAS PEQUENAS (block md:hidden) */}
+            {/* 2. VISÃO DE CARDS PARA TELAS PEQUENAS */}
             <div className="block md:hidden space-y-4">
               {signers.map(signer => (
                 <Card key={signer.email} className="bg-gray-50/50">
@@ -141,8 +160,6 @@ export default function Step2_AddSigners({ onNext, onBack, signers, setSigners }
                 </Card>
               ))}
             </div>
-
-            {/* --- FIM DA LÓGICA RESPONSIVA --- */}
           </div>
         )}
         
@@ -154,8 +171,19 @@ export default function Step2_AddSigners({ onNext, onBack, signers, setSigners }
         </div>
       </div>
 
-      <Modal_SelectSigners open={isSelectModalOpen} onOpenChange={setIsSelectModalOpen} onSelect={addSigners} />
-      <Modal_CreateSigner open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} onAdd={addSigners} />
+      {/* Modal de Seleção: Usa a função que apenas adiciona à lista (pois já existem no banco) */}
+      <Modal_SelectSigners 
+        open={isSelectModalOpen} 
+        onOpenChange={setIsSelectModalOpen} 
+        onSelect={addSignersToList} 
+      />
+      
+      {/* Modal de Criação: Usa a NOVA função que salva no banco primeiro */}
+      <Modal_CreateSigner 
+        open={isCreateModalOpen} 
+        onOpenChange={setIsCreateModalOpen} 
+        onSave={handleSaveNewSigner} 
+      />
     </>
   );
 }
