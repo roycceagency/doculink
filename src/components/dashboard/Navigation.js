@@ -11,6 +11,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+// URL do WhatsApp formatada
+const WHATSAPP_URL = "https://wa.me/5511987798662";
+
 // Definição dos links de navegação
 const navLinksPrimary = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
@@ -28,10 +31,12 @@ const navLinksPrimary = [
   { href: "/pastas", label: "Pastas", icon: Folder },
   { href: "/signatarios", label: "Signatários", icon: PenSquare },
 ];
+
 const navLinksSecondary = [
   { href: "/plano", label: "Meu Plano", icon: User },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
-  { href: "/support", label: "Suporte", icon: HelpCircle },
+  // Atualizado para usar a URL do WhatsApp e uma flag 'isExternal'
+  { href: WHATSAPP_URL, label: "Suporte", icon: HelpCircle, isExternal: true },
 ];
 
 export default function Navigation() {
@@ -39,10 +44,8 @@ export default function Navigation() {
 
   // Verifica se alguma rota de "Documentos" está ativa
   const isDocumentsActive = pathname.startsWith('/documentos');
-  // Estado para controlar se o menu "Documentos" está aberto
   const [isDocumentsOpen, setIsDocumentsOpen] = React.useState(isDocumentsActive);
 
-  // Efeito para garantir que o menu "Documentos" se abra automaticamente ao navegar para uma de suas páginas
   React.useEffect(() => {
     setIsDocumentsOpen(isDocumentsActive);
   }, [isDocumentsActive]);
@@ -93,10 +96,17 @@ export default function Navigation() {
       {/* Links de Navegação Secundários */}
       <div className="space-y-1">
          {navLinksSecondary.map((link) => (
-          <Link key={link.href} href={link.href} className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-gray-800 text-base font-medium transition-all hover:bg-gray-200/60", 
-            pathname === link.href && "text-blue-600"
-          )}>
+          <Link 
+            key={link.href} 
+            href={link.href}
+            // Lógica adicionada para abrir em nova aba se for link externo
+            target={link.isExternal ? "_blank" : undefined}
+            rel={link.isExternal ? "noopener noreferrer" : undefined}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-gray-800 text-base font-medium transition-all hover:bg-gray-200/60", 
+              pathname === link.href && "text-blue-600"
+            )}
+          >
             <link.icon className="h-5 w-5" />
             <span>{link.label}</span>
           </Link>
