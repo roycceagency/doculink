@@ -4,56 +4,88 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useAuth } from "@/context/AuthContext"; // Importa o AuthContext
 
 // Importa os componentes para cada passo do fluxo
 import Step1_Upload from './_components/Step1_Upload';
 import Step2_AddSigners from './_components/Step2_AddSigners';
 import Step3_Configure from './_components/Step3_Configure';
 import Step4_Send from './_components/Step4_Send';
-import Step5_SendSuccess from './_components/Step5_SendSuccess'; // Tela de sucesso
+import Step5_SendSuccess from './_components/Step5_SendSuccess';
 
 // Importa componentes de UI
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from '@/components/ui/skeleton';
+import { Lock, ArrowRight } from "lucide-react";
 
-// Define os passos do fluxo para o header
 const STEPS = [
   { number: 1, label: "Adicionar Documentos" },
   { number: 2, label: "Adicionar signatários" },
   { number: 3, label: "Configuração" },
   { number: 4, label: "Enviar" },
-  { number: 5, label: "Concluído" }, // Passo final para a tela de sucesso
+  { number: 5, label: "Concluído" },
 ];
 
-/**
- * Página principal que gerencia o fluxo de envio de documentos para assinatura.
- * Atua como um "wizard", controlando o estado e renderizando o componente do passo atual.
- */
 export default function SendDocumentFlow() {
+  const { user, loading } = useAuth(); // Pega o usuário para validar
   const [currentStep, setCurrentStep] = useState(1);
   const router = useRouter();
 
-  // Estado centralizado que armazena os dados coletados em cada etapa
   const [document, setDocument] = useState(null);
   const [signers, setSigners] = useState([]);
   const [config, setConfig] = useState({
-    deadlineAt: new Date(new Date().setDate(new Date().getDate() + 7)), // Data limite padrão: 7 dias
+    deadlineAt: new Date(new Date().setDate(new Date().getDate() + 7)), 
     autoReminders: false,
     readConfirmation: false,
   });
 
-  // Funções de navegação
   const goToNextStep = () => setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
   const goToPrevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
   const handleCancel = () => router.push('/dashboard');
+  const handleSendSuccess = () => setCurrentStep(5);
 
-  // Função para ser chamada pelo Step4 quando o envio for bem-sucedido
-  const handleSendSuccess = () => {
-    setCurrentStep(5); // Muda para a etapa da tela de sucesso
-  };
+  // --- ESTADO DE CARREGAMENTO ---
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
+        <Skeleton className="h-[400px] w-[600px] rounded-xl" />
+      </div>
+    );
+  }
 
-  /**
-   * Renderiza o componente correspondente ao passo atual.
-   */
+  // --- BLOQUEIO PARA VISUALIZADOR ---
+  if (user?.role === 'VIEWER') {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#F8FAFC] p-4">
+        <Card className="w-full max-w-md text-center p-8 shadow-lg border-none">
+            <CardContent className="flex flex-col items-center space-y-6 pt-4">
+                <div className="h-20 w-20 bg-red-100 rounded-full flex items-center justify-center">
+                    <Lock className="h-10 w-10 text-red-500" />
+                </div>
+                <div className="space-y-2">
+                    <h2 className="text-2xl font-bold text-gray-800">Acesso Restrito</h2>
+                    <p className="text-gray-500">
+                        Seu perfil atual <strong>(Visualizador)</strong> não tem permissão para enviar documentos.
+                    </p>
+                </div>
+                <Button 
+                    onClick={() => router.push('/onboarding')} 
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                    Trocar de Perfil <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button variant="ghost" onClick={() => router.push('/dashboard')}>
+                    Voltar ao Dashboard
+                </Button>
+            </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // --- RENDERIZAÇÃO NORMAL DO FLUXO ---
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -91,26 +123,18 @@ export default function SendDocumentFlow() {
     }
   };
 
-  /**
-   * Constrói o header com o logo e os indicadores de passo (stepper).
-   */
   const headerContent = (
     <div className="flex items-center gap-4 sm:gap-8">
-        {/* Logo visível em telas maiores */}
         <div className="hidden sm:block">
             <Image src="/logo.png" alt="Doculink Logo" width={140} height={32} />
         </div>
-
-        {/* Indicadores de passo */}
         <div className="flex items-center gap-2 sm:gap-4">
             {STEPS.map(step => (
-              // Não renderiza o passo "Concluído" no stepper
               step.number <= 4 && (
                 <div key={step.number} className={`flex items-center gap-2 text-sm ${currentStep >= step.number ? 'text-blue-600 font-semibold' : 'text-gray-400'}`}>
                     <div className={`flex items-center justify-center size-6 rounded-full transition-colors ${currentStep >= step.number ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
                         {step.number}
                     </div>
-                    {/* Oculta o texto em telas pequenas para economizar espaço */}
                     <span className="hidden md:inline">{step.label}</span>
                 </div>
               )
@@ -121,13 +145,11 @@ export default function SendDocumentFlow() {
 
   return (
     <div className="flex flex-col h-screen bg-[#F8FAFC]">
-      {/* Header Fixo do Fluxo */}
       <header className="flex h-[68px] items-center justify-between bg-white px-4 sm:px-6 border-b shrink-0">
         {headerContent}
         <Button variant="outline" onClick={() => router.push('/dashboard')}>Sair</Button>
       </header>
 
-      {/* Conteúdo Principal (onde os passos são renderizados) */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-8 overflow-y-auto">
         <div className="w-full max-w-3xl">
           {renderStepContent()}

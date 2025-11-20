@@ -4,7 +4,7 @@ import axios from 'axios';
 
 // 1. Cria uma instância do Axios com a URL base da sua API
 const api = axios.create({
-  baseURL: 'https://doculinka-api.inn2fb.easypanel.host/api',
+  baseURL: 'https://doculinka-doculinka-api.inn2fb.easypanel.host/api',
 });
 
 

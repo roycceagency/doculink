@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
@@ -17,8 +16,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ChevronRight, Download, MoreVertical } from 'lucide-react';
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuTrigger,
+    DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
+import { Download, MoreVertical, Ban } from 'lucide-react';
 
 // Mapeia o status da URL para a label e o parâmetro a ser enviado para a API
 const statusMap = {
@@ -28,11 +33,8 @@ const statusMap = {
   lixeira: { label: "Lixeira", apiQuery: "lixeira" },
 };
 
-// --- INÍCIO DA CORREÇÃO: COMPONENTE StatusBadge INCLUÍDO ---
 /**
  * Componente para renderizar um Badge colorido com base no status do documento.
- * @param {object} props - Propriedades do componente.
- * @param {string} props.status - O status do documento (ex: 'SIGNED', 'READY').
  */
 const StatusBadge = ({ status }) => {
     const styles = {
@@ -41,23 +43,29 @@ const StatusBadge = ({ status }) => {
         'PARTIALLY_SIGNED': "text-blue-700 border-blue-200 bg-blue-50",
         'CANCELLED': "text-gray-700 border-gray-200 bg-gray-50",
         'EXPIRED': "text-red-700 border-red-200 bg-red-50",
+        'DRAFT': "text-gray-600 border-gray-200 bg-gray-100"
     };
     const label = {
         'SIGNED': 'Concluído',
         'READY': 'Pendente',
         'PARTIALLY_SIGNED': 'Em andamento',
-        'CANCELLED': 'Na Lixeira',
+        'CANCELLED': 'Cancelado',
         'EXPIRED': 'Expirado',
+        'DRAFT': 'Rascunho'
     };
-    // Usa 'border' para uma borda sutil e um fundo mais claro
-    return <Badge variant="outline" className={`font-semibold ${styles[status] || styles['CANCELLED']}`}>{label[status] || status}</Badge>;
+    
+    return (
+        <Badge variant="outline" className={`font-semibold ${styles[status] || styles['CANCELLED']}`}>
+            {label[status] || status}
+        </Badge>
+    );
 };
-// --- FIM DA CORREÇÃO ---
 
-export default function DocumentsPage({ params }) {
-    const { isAuthenticated } = useAuth();
+export default function DocumentsPage() {
+    const { isAuthenticated, user } = useAuth();
     const pathname = usePathname();
 
+    // Determina qual aba está ativa baseado na URL
     const currentStatusKey = useMemo(() => {
         const segments = pathname.split('/');
         const statusFromUrl = segments[segments.length - 1];
@@ -68,42 +76,74 @@ export default function DocumentsPage({ params }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Efeito para buscar os documentos da API
-    useEffect(() => {
-        if (!isAuthenticated) return;
+    // Lógica de Permissões (RBAC)
+    // MANAGER e ADMIN podem cancelar documentos. VIEWER só pode baixar.
+    const canManage = ['ADMIN', 'MANAGER', 'SUPER_ADMIN'].includes(user?.role);
 
-        const fetchDocuments = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const statusInfo = statusMap[currentStatusKey] || statusMap.pendentes;
-                const apiQuery = statusInfo.apiQuery;
-                const url = apiQuery ? `/documents?status=${apiQuery}` : '/documents';
-                
-                const response = await api.get(url);
-                setDocuments(response.data);
-            } catch (err) {
-                console.error(`Falha ao buscar docs para '${currentStatusKey}':`, err);
-                setError("Não foi possível carregar os documentos.");
-            } finally {
-                setLoading(false);
-            }
-        };
-        
-        fetchDocuments();
-    }, [isAuthenticated, currentStatusKey]);
-
-    // Gera o conteúdo dos breadcrumbs para o Header
-    const headerLeftContent = useMemo(() => {
-        // ... (lógica dos breadcrumbs, sem alterações)
-    }, [currentStatusKey]);
-    
-    // Função para lidar com o download
-    const handleDownload = async (documentId) => {
-        // ... (lógica de download, sem alterações)
+    // Função de Busca
+    const fetchDocuments = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const statusInfo = statusMap[currentStatusKey] || statusMap.pendentes;
+            const apiQuery = statusInfo.apiQuery;
+            // Se apiQuery for null (Todos), não envia parâmetro
+            const url = apiQuery ? `/documents?status=${apiQuery}` : '/documents';
+            
+            const response = await api.get(url);
+            setDocuments(response.data);
+        } catch (err) {
+            console.error(`Falha ao buscar docs para '${currentStatusKey}':`, err);
+            setError("Não foi possível carregar os documentos.");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // Função que renderiza o corpo da tabela
+    // Efeito para buscar os documentos da API quando auth ou aba mudar
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchDocuments();
+        }
+    }, [isAuthenticated, currentStatusKey]);
+
+    // Configuração do Header
+    const headerLeftContent = (
+        <div className="flex flex-col">
+            <h1 className="text-xl font-semibold text-gray-800">Documentos</h1>
+            <p className="text-sm text-muted-foreground">
+                {statusMap[currentStatusKey]?.label || "Lista de Documentos"}
+            </p>
+        </div>
+    );
+    
+    // --- AÇÕES DE DOCUMENTO ---
+
+    const handleDownload = async (documentId) => {
+        try {
+            const { data } = await api.get(`/documents/${documentId}/download`);
+            if (data.url) {
+                window.open(data.url, '_blank');
+            }
+        } catch (error) {
+            alert("Erro ao iniciar download.");
+        }
+    };
+
+    const handleCancel = async (documentId) => {
+        if (!confirm("Tem certeza que deseja cancelar este documento? O link de assinatura será invalidado.")) return;
+        
+        try {
+            await api.post(`/documents/${documentId}/cancel`);
+            // Atualiza a lista localmente
+            fetchDocuments();
+        } catch (error) {
+            alert("Erro ao cancelar documento.");
+        }
+    };
+
+    // --- RENDERIZAÇÃO ---
+
     const renderTableBody = () => {
         if (loading) {
             return Array.from({ length: 5 }).map((_, index) => (
@@ -111,28 +151,48 @@ export default function DocumentsPage({ params }) {
             ));
         }
         if (error) {
-            return <TableRow><TableCell colSpan={6} className="text-center h-24 text-red-600 font-medium">{error}</TableCell></TableRow>;
+            return <TableRow><TableCell colSpan={6} className="text-center h-32 text-red-600 font-medium">{error}</TableCell></TableRow>;
         }
         if (documents.length === 0) {
-            return <TableRow><TableCell colSpan={6} className="text-center h-24 text-gray-500">Nenhum documento encontrado.</TableCell></TableRow>;
+            return <TableRow><TableCell colSpan={6} className="text-center h-32 text-gray-500">Nenhum documento encontrado nesta categoria.</TableCell></TableRow>;
         }
+        
         return documents.map((doc) => (
             <TableRow key={doc.id}>
                 <TableCell><Checkbox /></TableCell>
-                <TableCell className="font-medium text-gray-800">{doc.title}</TableCell>
+                <TableCell>
+                    <div className="flex flex-col">
+                        <span className="font-medium text-gray-800">{doc.title}</span>
+                        {/* Opcional: Mostrar quem criou se for colaborativo */}
+                        {doc.owner && <span className="text-xs text-gray-400">Criado por: {doc.owner.name}</span>}
+                    </div>
+                </TableCell>
                 <TableCell><StatusBadge status={doc.status} /></TableCell>
-                <TableCell>{"N/A"}</TableCell>
-                <TableCell>{format(new Date(doc.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
+                <TableCell className="text-gray-600 text-sm">{doc.Signers ? `${doc.Signers.length} Assinantes` : '-'}</TableCell>
+                <TableCell className="text-gray-600 text-sm">{format(new Date(doc.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
                 <TableCell className="text-right">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-100">
+                                <MoreVertical className="h-4 w-4 text-gray-500" />
+                            </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleDownload(doc.id)}>
+                            <DropdownMenuItem onSelect={() => handleDownload(doc.id)} className="cursor-pointer">
                                 <Download className="mr-2 h-4 w-4" />
-                                <span>Baixar Documento</span>
+                                <span>Baixar Original</span>
                             </DropdownMenuItem>
+
+                            {/* Apenas mostra Cancelar se tiver permissão E o documento não estiver finalizado/cancelado */}
+                            {canManage && doc.status !== 'SIGNED' && doc.status !== 'CANCELLED' && doc.status !== 'EXPIRED' && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onSelect={() => handleCancel(doc.id)} className="text-red-600 cursor-pointer focus:text-red-700 focus:bg-red-50">
+                                        <Ban className="mr-2 h-4 w-4" />
+                                        <span>Cancelar</span>
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>
@@ -144,19 +204,20 @@ export default function DocumentsPage({ params }) {
         <>
             <Header
                 leftContent={headerLeftContent}
-                actionButtonText="Enviar Documento"
+                // Esconde botão de enviar se o usuário for apenas VIEWER
+                actionButtonText={canManage ? "Enviar Documento" : null}
             />
+            
             <main className="flex-1 p-6 space-y-6">
-                <h2 className="text-3xl font-bold text-gray-800">Documentos</h2>
-                <Card className="bg-white shadow-sm rounded-xl border">
+                <Card className="bg-white shadow-sm rounded-xl border overflow-hidden">
                     <CardContent className="p-0">
                         <Table>
-                            <TableHeader>
+                            <TableHeader className="bg-gray-50/50">
                                 <TableRow>
                                     <TableHead className="w-[50px]"><Checkbox /></TableHead>
                                     <TableHead>Documento</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Pasta</TableHead>
+                                    <TableHead>Assinantes</TableHead>
                                     <TableHead>Criado Em</TableHead>
                                     <TableHead className="text-right w-[80px]">Ações</TableHead>
                                 </TableRow>
@@ -166,9 +227,15 @@ export default function DocumentsPage({ params }) {
                             </TableBody>
                         </Table>
                     </CardContent>
-                    <CardFooter className="flex items-center justify-between p-4 bg-gray-50/50 rounded-b-xl">
-                        <div className="text-sm text-muted-foreground">Total de {documents.length} registros</div>
-                    </CardFooter>
+                    
+                    {documents.length > 0 && (
+                        <CardFooter className="flex items-center justify-between p-4 bg-gray-50/50 border-t">
+                            <div className="text-sm text-muted-foreground">
+                                Mostrando {documents.length} registro(s)
+                            </div>
+                            {/* Paginação futura pode entrar aqui */}
+                        </CardFooter>
+                    )}
                 </Card>
             </main>
         </>
