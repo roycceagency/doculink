@@ -28,9 +28,6 @@ export default function AdminSettingsPage() {
         
         // Resend
         resendApiKey: "",
-        // Como não temos o campo 'resendFromEmail' no banco ainda, 
-        // vamos usar o 'supportEmail' ou um campo ad-hoc. 
-        // Vou mapear para 'supportEmail' para persistir no backend existente.
         supportEmail: "", 
         resendActive: false
     });
@@ -48,14 +45,14 @@ export default function AdminSettingsPage() {
         const fetchSettings = async () => {
             try {
                 const { data } = await api.get('/settings');
-                // Preenche o estado com os dados vindos do banco
+
                 setSettings({
                     zapiInstanceId: data.zapiInstanceId || "",
                     zapiToken: data.zapiToken || "",
                     zapiClientToken: data.zapiClientToken || "",
                     zapiActive: data.zapiActive || false,
                     resendApiKey: data.resendApiKey || "",
-                    supportEmail: data.supportEmail || "", // Usando como "Email do Resend"
+                    supportEmail: data.supportEmail || "",
                     resendActive: data.resendActive || false,
                 });
             } catch (error) {
@@ -78,7 +75,6 @@ export default function AdminSettingsPage() {
     const handleSaveSettings = async () => {
         setSavingSettings(true);
         try {
-            // Envia para a rota PATCH /api/settings
             await api.patch('/settings', settings);
             alert("Integrações salvas com sucesso!");
         } catch (error) {
@@ -147,6 +143,7 @@ export default function AdminSettingsPage() {
 
                     {/* --- ABA: INTEGRAÇÕES --- */}
                     <TabsContent value="integrations" className="space-y-6">
+                        
                         {/* Z-API (WhatsApp) */}
                         <Card className="border shadow-sm">
                             <CardHeader className="pb-4">
@@ -231,7 +228,9 @@ export default function AdminSettingsPage() {
                             <CardContent className="pt-6 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label htmlFor="resendApiKey">API Key (Começa com 're_')</Label>
+                                        <Label htmlFor="resendApiKey">
+                                            {`API Key (Começa com 're_')`}
+                                        </Label>
                                         <Input 
                                             id="resendApiKey" 
                                             type="password"
