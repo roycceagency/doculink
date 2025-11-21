@@ -1,8 +1,7 @@
-// src/app/(dashboard)/plan/page.js
+// src/app/(dashboard)/plano/page.js
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/dashboard/Header";
@@ -15,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { CheckCircle2, AlertCircle, Zap, CreditCard, QrCode, Loader2, Copy, Check } from "lucide-react";
-import { toast } from "sonner"; // Assumindo que você usa sonner ou similar, ou use alert padrão
 
 // --- UTILITÁRIOS DE MÁSCARA ---
 const masks = {
@@ -38,7 +36,7 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
         expiry: "",
         ccv: "",
         cpfCnpj: user?.cpf || "",
-        phone: user?.phoneWhatsE164 || "", // Assumindo que vem do user context formatado
+        phone: user?.phoneWhatsE164 || "", 
     });
 
     // Reseta estados ao fechar/abrir
@@ -86,7 +84,7 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
                     name: formData.holderName,
                     email: user.email,
                     cpfCnpj: formData.cpfCnpj.replace(/\D/g, ""),
-                    postalCode: "00000000", // Idealmente, pedir endereço no form
+                    postalCode: "00000000", 
                     addressNumber: "0",
                     phone: formData.phone.replace(/\D/g, "")
                 };
@@ -96,7 +94,7 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
 
             if (paymentMethod === 'CREDIT_CARD') {
                 alert("Assinatura realizada com sucesso!");
-                window.location.reload(); // Recarrega para atualizar limites
+                window.location.reload(); 
             } else if (paymentMethod === 'PIX') {
                 if (data.pixInfo) {
                     setPixData(data.pixInfo);
@@ -109,9 +107,8 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
             console.error("Erro no pagamento:", error);
             alert(error.response?.data?.message || "Erro ao processar pagamento. Verifique os dados.");
         } finally {
-            // Se for PIX, não tira o loading visual do form, mas mostra o QR Code
             if (paymentMethod !== 'PIX') setLoading(false); 
-            else if (pixData) setLoading(false); // Já temos o PIX
+            else if (pixData) setLoading(false); 
             else setLoading(false);
         }
     };
@@ -183,7 +180,8 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
                         </TabsContent>
 
                         <TabsContent value="PIX" className="py-4 text-center text-sm text-gray-500">
-                            <p>Ao clicar em "Pagar com PIX", um QR Code será gerado.</p>
+                            {/* CORREÇÃO AQUI: Aspas trocadas por &quot; */}
+                            <p>Ao clicar em &quot;Pagar com PIX&quot;, um QR Code será gerado.</p>
                             <p>A liberação do plano ocorre em alguns instantes após o pagamento.</p>
                         </TabsContent>
                     </Tabs>
@@ -195,7 +193,8 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
                         </div>
                         
                         <div className="border-4 border-white shadow-lg rounded-lg overflow-hidden">
-                            {/* Renderiza imagem Base64 do QR Code retornada pelo Asaas */}
+                            {/* CORREÇÃO AQUI: Adicionado eslint-disable para o next/image */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img 
                                 src={`data:image/png;base64,${pixData.encodedImage}`} 
                                 alt="QR Code PIX" 
@@ -267,7 +266,6 @@ const UsageBar = ({ label, value, total, unit }) => {
 };
 
 // --- DADOS DOS PLANOS ---
-// Certifique-se que os slugs batem com o que está no banco (Plan.slug)
 const AVAILABLE_PLANS = [
     {
         name: 'Básico',
@@ -281,7 +279,7 @@ const AVAILABLE_PLANS = [
         slug: 'profissional',
         price: '49.90',
         features: ['Até 50 Documentos', '5 Usuários', 'Templates personalizados', 'API básica', 'Suporte prioritário'],
-        highlight: true, // MAIS POPULAR
+        highlight: true,
         tag: 'MAIS POPULAR'
     },
     {
