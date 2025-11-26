@@ -62,7 +62,7 @@ const ItemVisual = ({ type, name, subtitle, isOver, isDragging }) => {
     );
 };
 
-// --- ZONA DE DROP "VOLTAR" (Botão de voltar que aceita arquivos) ---
+// --- ZONA DE DROP "VOLTAR" ---
 const BackDropZone = ({ onClick }) => {
     const { setNodeRef, isOver } = useDroppable({
         id: 'folder-back',
@@ -85,7 +85,7 @@ const BackDropZone = ({ onClick }) => {
     );
 };
 
-// --- COMPONENTE: PASTA (Draggable AND Droppable) ---
+// --- COMPONENTE: PASTA ---
 const FolderItem = ({ folder, onClick, onDelete, onRename, canEdit }) => {
     const draggable = useDraggable({ id: `folder-${folder.id}`, data: { type: 'FOLDER', id: folder.id, name: folder.name } });
     const droppable = useDroppable({ id: `folder-${folder.id}`, data: { type: 'FOLDER', id: folder.id, name: folder.name } });
@@ -135,7 +135,7 @@ const FolderItem = ({ folder, onClick, onDelete, onRename, canEdit }) => {
     );
 };
 
-// --- COMPONENTE: ARQUIVO (Apenas Draggable) ---
+// --- COMPONENTE: ARQUIVO ---
 const DocumentItem = ({ doc, onOpen }) => {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: `doc-${doc.id}`,
@@ -166,13 +166,11 @@ const DocumentItem = ({ doc, onOpen }) => {
 export default function FoldersPage() {
   const { user } = useAuth();
   
-  // Estados de Dados
+  // Estados
   const [currentFolder, setCurrentFolder] = useState('root'); 
   const [breadcrumbs, setBreadcrumbs] = useState([{ id: 'root', name: 'Início' }]);
   const [content, setContent] = useState({ folders: [], documents: [] });
   const [loading, setLoading] = useState(true);
-  
-  // Estados de UI
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -185,8 +183,6 @@ export default function FoldersPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [renameFolder, setRenameFolder] = useState(null);
   const [viewDocId, setViewDocId] = useState(null);
-  
-  // Estado para Confirmação de Movimento (Novo Modal)
   const [moveConfirmation, setMoveConfirmation] = useState(null);
 
   // Permissões
@@ -211,7 +207,10 @@ export default function FoldersPage() {
         if (debouncedSearch) params.search = debouncedSearch;
         else params.parentId = currentFolder;
 
-        const { data } = await api.get('/documents/folders', { params });
+        // --- CORREÇÃO: Alterado de /documents/folders para /folders ---
+        const { data } = await api.get('/folders', { params });
+        // -----------------------------------------------------------
+
         setContent({ folders: data.folders || [], documents: data.documents || [] });
 
         if (!debouncedSearch && data.breadcrumbs) setBreadcrumbs(data.breadcrumbs);
@@ -259,19 +258,17 @@ export default function FoldersPage() {
     const { active, over } = event;
 
     if (!over) return;
-    if (active.id === over.id) return; // Soltou em si mesmo
+    if (active.id === over.id) return;
 
     const activeType = active.data.current.type;
     const overType = over.data.current.type;
     
-    // Só permite soltar dentro de uma PASTA (ou no botão Voltar)
     if (overType !== 'FOLDER') return;
 
     const itemId = active.data.current.id;
     let targetFolderId = over.data.current.id;
     let targetName = over.data.current.name;
 
-    // *** LÓGICA DE VOLTAR PASTA ***
     if (targetFolderId === 'back' || over.id === 'folder-back') {
         if (breadcrumbs.length < 2) return;
         const parentFolder = breadcrumbs[breadcrumbs.length - 2];
@@ -279,10 +276,8 @@ export default function FoldersPage() {
         targetName = parentFolder.name;
     }
 
-    // Impede mover pasta pra dentro dela mesma
     if (itemId === targetFolderId) return;
 
-    // Abre o Modal de Confirmação
     setMoveConfirmation({
         itemId,
         itemType: activeType,
@@ -295,12 +290,10 @@ export default function FoldersPage() {
   // --- CONFIRMAÇÃO DE MOVIMENTO ---
   const handleConfirmMove = async () => {
     if (!moveConfirmation) return;
-    
     const { itemId, itemType, targetFolderId } = moveConfirmation;
-    setMoveConfirmation(null); // Fecha modal
+    setMoveConfirmation(null);
 
     try {
-        // Otimismo: Remove da UI imediatamente
         if(itemType === 'DOCUMENT') {
             setContent(prev => ({...prev, documents: prev.documents.filter(d => d.id !== itemId)}));
         } else {
@@ -308,32 +301,18 @@ export default function FoldersPage() {
         }
 
         await api.post('/folders/move', { itemId, itemType, targetFolderId });
-        fetchContents(); // Sincroniza certeza
+        fetchContents();
     } catch (error) {
         alert("Erro ao mover item.");
-        fetchContents(); // Reverte
+        fetchContents();
     }
   };
 
-  // Ações
-  const handleEnterFolder = (folder) => {
-    setSearch(""); 
-    setCurrentFolder(folder.id);
-  };
-  const handleBreadcrumbClick = (item) => {
-    setSearch("");
-    setCurrentFolder(item.id);
-  };
-  const handleGoUp = () => {
-    if (breadcrumbs.length > 1) handleBreadcrumbClick(breadcrumbs[breadcrumbs.length - 2]);
-  };
-  const handleDeleteFolder = async (id) => {
-    if(!confirm("Tem certeza? Arquivos internos irão para a Raiz.")) return;
-    try { await api.delete(`/folders/${id}`); fetchContents(); } catch(e) { alert("Erro ao excluir."); }
-  };
-  const handleOpenDocument = (docId) => {
-    setViewDocId(docId);
-  };
+  const handleEnterFolder = (folder) => { setSearch(""); setCurrentFolder(folder.id); };
+  const handleBreadcrumbClick = (item) => { setSearch(""); setCurrentFolder(item.id); };
+  const handleGoUp = () => { if (breadcrumbs.length > 1) handleBreadcrumbClick(breadcrumbs[breadcrumbs.length - 2]); };
+  const handleDeleteFolder = async (id) => { if(!confirm("Tem certeza? Arquivos internos irão para a Raiz.")) return; try { await api.delete(`/folders/${id}`); fetchContents(); } catch(e) { alert("Erro ao excluir."); } };
+  const handleOpenDocument = (docId) => { setViewDocId(docId); };
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -358,18 +337,14 @@ export default function FoldersPage() {
                 
                 {canEdit && !debouncedSearch && (
                     <div className="flex gap-2 w-full md:w-auto">
-                        {/* BOTÃO DE UPLOAD RÁPIDO */}
                         <div className="relative">
-                            <input 
-                                type="file" 
-                                id="upload-file" 
-                                className="hidden" 
-                                onChange={handleFileUpload} 
-                                disabled={uploading}
-                                accept=".pdf"
-                            />
+                            <input type="file" id="upload-file" className="hidden" onChange={handleFileUpload} disabled={uploading} accept=".pdf" />
+                            <label htmlFor="upload-file">
+                                <Button asChild variant="outline" className="cursor-pointer border-blue-200 text-blue-700 hover:bg-blue-50" disabled={uploading}>
+                                    <span>{uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UploadCloud className="h-4 w-4 mr-2" />} Upload Aqui</span>
+                                </Button>
+                            </label>
                         </div>
-
                         <Button onClick={() => setIsCreateOpen(true)} className="bg-[#1c4ed8] hover:bg-[#1c4ed8]/90">
                             <Plus className="mr-2 h-4 w-4" /> Nova Pasta
                         </Button>
@@ -380,23 +355,12 @@ export default function FoldersPage() {
             {/* ÁREA DE ARQUIVOS */}
             <div className="flex-1 flex flex-col bg-white rounded-xl border shadow-sm overflow-hidden relative">
                 
-                {/* Breadcrumbs */}
                 {!debouncedSearch && (
                     <div className="flex items-center gap-2 p-4 border-b bg-gray-50/50 text-sm overflow-x-auto">
-                        {currentFolder !== 'root' && (
-                            // DROP ZONE DE VOLTAR
-                            <BackDropZone onClick={handleGoUp} />
-                        )}
+                        {currentFolder !== 'root' && <BackDropZone onClick={handleGoUp} />}
                         {breadcrumbs.map((item, index) => (
                             <div key={item.id} className="flex items-center">
-                                <button 
-                                    onClick={() => handleBreadcrumbClick(item)}
-                                    className={`flex items-center gap-1 px-2 py-1 rounded-md ${
-                                        index === breadcrumbs.length - 1 
-                                        ? "font-semibold text-gray-900 bg-white shadow-sm pointer-events-none" 
-                                        : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
-                                    }`}
-                                >
+                                <button onClick={() => handleBreadcrumbClick(item)} className={`flex items-center gap-1 px-2 py-1 rounded-md ${index === breadcrumbs.length - 1 ? "font-semibold text-gray-900 bg-white shadow-sm pointer-events-none" : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"}`}>
                                     {item.id === 'root' && <Home className="h-3.5 w-3.5 mb-0.5" />}
                                     {item.name}
                                 </button>
@@ -406,7 +370,6 @@ export default function FoldersPage() {
                     </div>
                 )}
 
-                {/* Conteúdo Grid */}
                 <div className="flex-1 p-6 overflow-y-auto bg-[#FBFCFD]">
                     {loading ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -421,26 +384,16 @@ export default function FoldersPage() {
                                 </div>
                             ) : (
                                 <div className="space-y-8 pb-20">
-                                    {/* Pastas */}
                                     {content.folders.length > 0 && (
                                         <div>
                                             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Pastas</h3>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                                 {content.folders.map(folder => (
-                                                    <FolderItem 
-                                                        key={folder.id} 
-                                                        folder={folder} 
-                                                        onClick={handleEnterFolder}
-                                                        onDelete={handleDeleteFolder}
-                                                        onRename={setRenameFolder}
-                                                        canEdit={canEdit}
-                                                    />
+                                                    <FolderItem key={folder.id} folder={folder} onClick={handleEnterFolder} onDelete={handleDeleteFolder} onRename={setRenameFolder} canEdit={canEdit} />
                                                 ))}
                                             </div>
                                         </div>
                                     )}
-
-                                    {/* Arquivos */}
                                     {content.documents.length > 0 && (
                                         <div>
                                             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">Arquivos</h3>
@@ -459,77 +412,34 @@ export default function FoldersPage() {
             </div>
         </main>
 
-        {/* Drag Overlay (Item Fantasma) */}
         <DragOverlay>
-            {activeId && activeItem ? (
-                <div className="w-48">
-                    <ItemVisual 
-                        type={activeItem.type} 
-                        name={activeItem.name || activeItem.title} 
-                        isDragging 
-                    />
-                </div>
-            ) : null}
+            {activeId && activeItem ? <div className="w-48"><ItemVisual type={activeItem.type} name={activeItem.name || activeItem.title} isDragging /></div> : null}
         </DragOverlay>
 
-        {/* Modais de Ação */}
         <Modal_CreateFolder open={isCreateOpen} onOpenChange={setIsCreateOpen} parentId={currentFolder} onSuccess={fetchContents} />
         <Modal_RenameFolder open={!!renameFolder} onOpenChange={(open) => !open && setRenameFolder(null)} folder={renameFolder} onSuccess={fetchContents} />
         <Modal_ViewDocument open={!!viewDocId} onOpenChange={(open) => !open && setViewDocId(null)} documentId={viewDocId} />
 
-        {/* Modal de Confirmação de Movimento (Substitui window.confirm) */}
         <Dialog open={!!moveConfirmation} onOpenChange={(open) => !open && setMoveConfirmation(null)}>
             <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Mover item?</DialogTitle>
-                    <DialogDescription className="pt-2">
-                        Você está movendo este item de local.
-                    </DialogDescription>
-                </DialogHeader>
-                
+                <DialogHeader><DialogTitle>Mover item?</DialogTitle><DialogDescription className="pt-2">Você está movendo este item de local.</DialogDescription></DialogHeader>
                 <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg border">
-                    {/* Item sendo movido */}
                     <div className="flex flex-col items-center w-[40%]">
-                        <div className="mb-2 p-2 bg-white rounded-md border shadow-sm">
-                            {moveConfirmation?.itemType === 'FOLDER' 
-                                ? <Folder className="h-6 w-6 text-yellow-500 fill-current" /> 
-                                : <FileText className="h-6 w-6 text-red-500" />
-                            }
-                        </div>
-                        <span className="text-xs font-medium text-center truncate w-full px-1" title={moveConfirmation?.itemName}>
-                            {moveConfirmation?.itemName}
-                        </span>
+                        <div className="mb-2 p-2 bg-white rounded-md border shadow-sm">{moveConfirmation?.itemType === 'FOLDER' ? <Folder className="h-6 w-6 text-yellow-500 fill-current" /> : <FileText className="h-6 w-6 text-red-500" />}</div>
+                        <span className="text-xs font-medium text-center truncate w-full px-1" title={moveConfirmation?.itemName}>{moveConfirmation?.itemName}</span>
                     </div>
-
-                    {/* Seta */}
-                    <div className="flex flex-col items-center text-gray-400">
-                        <ArrowRight className="h-5 w-5 animate-pulse text-blue-500" />
-                    </div>
-
-                    {/* Destino */}
+                    <div className="flex flex-col items-center text-gray-400"><ArrowRight className="h-5 w-5 animate-pulse text-blue-500" /></div>
                     <div className="flex flex-col items-center w-[40%]">
-                        <div className="mb-2 p-2 bg-white rounded-md border shadow-sm">
-                            {/* Se o destino for "Pasta Anterior", usamos um ícone diferente */}
-                            {moveConfirmation?.targetName === 'Pasta Anterior' 
-                                ? <CornerUpLeft className="h-6 w-6 text-blue-500" />
-                                : <Folder className="h-6 w-6 text-blue-500 fill-blue-100" />
-                            }
-                        </div>
-                        <span className="text-xs font-medium text-center truncate w-full px-1" title={moveConfirmation?.targetName}>
-                            {moveConfirmation?.targetName}
-                        </span>
+                        <div className="mb-2 p-2 bg-white rounded-md border shadow-sm">{moveConfirmation?.targetName === 'Pasta Anterior' ? <CornerUpLeft className="h-6 w-6 text-blue-500" /> : <Folder className="h-6 w-6 text-blue-500 fill-blue-100" />}</div>
+                        <span className="text-xs font-medium text-center truncate w-full px-1" title={moveConfirmation?.targetName}>{moveConfirmation?.targetName}</span>
                     </div>
                 </div>
-
                 <DialogFooter className="mt-2">
                     <Button variant="ghost" onClick={() => setMoveConfirmation(null)}>Cancelar</Button>
-                    <Button onClick={handleConfirmMove} className="bg-[#1c4ed8] hover:bg-[#1c4ed8]/90">
-                        Confirmar Movimento
-                    </Button>
+                    <Button onClick={handleConfirmMove} className="bg-[#1c4ed8] hover:bg-[#1c4ed8]/90">Confirmar Movimento</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-
     </DndContext>
   );
 }

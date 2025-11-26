@@ -1,3 +1,4 @@
+// src/app/(dashboard)/documents/_components/Modal_MoveDocument.js
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -16,19 +17,15 @@ export default function Modal_MoveDocument({ open, onOpenChange, document, onSuc
   const [loading, setLoading] = useState(false);
   const [loadingFolders, setLoadingFolders] = useState(false);
 
-  // Busca as pastas quando o modal abre
   useEffect(() => {
     if (open) {
       const fetchFolders = async () => {
         setLoadingFolders(true);
         try {
-          // Reutilizamos a rota de busca com 'search=' vazio para pegar tudo ou criamos uma rota especifica de arvore
-          // Para simplificar, vamos buscar a lista plana de pastas na raiz e subpastas (requer ajuste no backend se quiser recursivo profundo)
-          // Aqui vamos assumir que /folders busca o nivel superior, ou usamos search para pegar tudo
-          const { data } = await api.get('/documents/folders?search='); 
+          // --- CORREÇÃO: Rota corrigida para /folders ---
+          const { data } = await api.get('/folders?search='); 
+          // --------------------------------------------
           setFolders(data.folders || []);
-          
-          // Define a pasta atual do documento como selecionada
           setSelectedFolder(document?.folderId || 'root');
         } catch (error) {
           console.error("Erro ao buscar pastas", error);
@@ -43,7 +40,7 @@ export default function Modal_MoveDocument({ open, onOpenChange, document, onSuc
   const handleMove = async () => {
     setLoading(true);
     try {
-      // Chama o endpoint de mover que criamos anteriormente
+      // A rota de mover já estava correta (/folders/move)
       await api.post('/folders/move', {
         itemId: document.id,
         itemType: 'DOCUMENT',
