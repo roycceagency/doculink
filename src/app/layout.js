@@ -1,7 +1,9 @@
+// src/app/layout.js
+
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext"; // <<< IMPORTAR
-import 'react-international-phone/style.css'; // <<< Adicione esta linha
+import { AuthProvider } from "@/context/AuthContext";
+import 'react-international-phone/style.css';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,9 +22,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    // CORREÇÃO AQUI: Mude para pt-BR e adicione suppressHydrationWarning
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider> {/* <<< ENVOLVER */}
+        <AuthProvider>
           {children}
         </AuthProvider>
       </body>

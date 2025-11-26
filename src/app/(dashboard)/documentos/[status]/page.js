@@ -23,7 +23,11 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator 
 } from '@/components/ui/dropdown-menu';
-import { Download, MoreVertical, Ban } from 'lucide-react';
+import { Download, MoreVertical, Ban, FolderOpen, Move, Eye } from 'lucide-react';
+
+// Importa os Modais
+import Modal_MoveDocument from '../_components/Modal_MoveDocument';
+import Modal_ViewDocument from '@/components/dashboard/Modal_ViewDocument';
 
 // Mapeia o status da URL para a label e o parâmetro a ser enviado para a API
 const statusMap = {
@@ -76,8 +80,12 @@ export default function DocumentsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Estados para controlar os modais
+    const [moveDoc, setMoveDoc] = useState(null);
+    const [viewDocId, setViewDocId] = useState(null);
+
     // Lógica de Permissões (RBAC)
-    // MANAGER e ADMIN podem cancelar documentos. VIEWER só pode baixar.
+    // MANAGER e ADMIN podem cancelar e mover documentos. VIEWER só pode baixar/visualizar.
     const canManage = ['ADMIN', 'MANAGER', 'SUPER_ADMIN'].includes(user?.role);
 
     // Função de Busca
@@ -87,7 +95,7 @@ export default function DocumentsPage() {
         try {
             const statusInfo = statusMap[currentStatusKey] || statusMap.pendentes;
             const apiQuery = statusInfo.apiQuery;
-            // Se apiQuery for null (Todos), não envia parâmetro
+            // Se apiQuery for null (Todos), não envia parâmetro status
             const url = apiQuery ? `/documents?status=${apiQuery}` : '/documents';
             
             const response = await api.get(url);
@@ -119,6 +127,10 @@ export default function DocumentsPage() {
     
     // --- AÇÕES DE DOCUMENTO ---
 
+    const handleViewDocument = (docId) => {
+        setViewDocId(docId); // Abre o modal interno
+    };
+
     const handleDownload = async (documentId) => {
         try {
             const { data } = await api.get(`/documents/${documentId}/download`);
@@ -146,30 +158,45 @@ export default function DocumentsPage() {
 
     const renderTableBody = () => {
         if (loading) {
+            // 8 colunas para cobrir o layout
             return Array.from({ length: 5 }).map((_, index) => (
-                <TableRow key={`skel-${index}`}><TableCell colSpan={6}><Skeleton className="w-full h-8" /></TableCell></TableRow>
+                <TableRow key={`skel-${index}`}><TableCell colSpan={8}><Skeleton className="w-full h-8" /></TableCell></TableRow>
             ));
         }
         if (error) {
-            return <TableRow><TableCell colSpan={6} className="text-center h-32 text-red-600 font-medium">{error}</TableCell></TableRow>;
+            return <TableRow><TableCell colSpan={8} className="text-center h-32 text-red-600 font-medium">{error}</TableCell></TableRow>;
         }
         if (documents.length === 0) {
-            return <TableRow><TableCell colSpan={6} className="text-center h-32 text-gray-500">Nenhum documento encontrado nesta categoria.</TableCell></TableRow>;
+            return <TableRow><TableCell colSpan={8} className="text-center h-32 text-gray-500">Nenhum documento encontrado nesta categoria.</TableCell></TableRow>;
         }
         
         return documents.map((doc) => (
             <TableRow key={doc.id}>
                 <TableCell><Checkbox /></TableCell>
+                
+                {/* Nome e Criador */}
                 <TableCell>
                     <div className="flex flex-col">
                         <span className="font-medium text-gray-800">{doc.title}</span>
-                        {/* Opcional: Mostrar quem criou se for colaborativo */}
                         {doc.owner && <span className="text-xs text-gray-400">Criado por: {doc.owner.name}</span>}
                     </div>
                 </TableCell>
+                
+                {/* Pasta (Local) */}
+                <TableCell>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <FolderOpen className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="truncate max-w-[120px]" title={doc.folder?.name || 'Início'}>
+                            {doc.folder?.name || 'Início'}
+                        </span>
+                    </div>
+                </TableCell>
+
                 <TableCell><StatusBadge status={doc.status} /></TableCell>
                 <TableCell className="text-gray-600 text-sm">{doc.Signers ? `${doc.Signers.length} Assinantes` : '-'}</TableCell>
                 <TableCell className="text-gray-600 text-sm">{format(new Date(doc.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
+                
+                {/* Ações */}
                 <TableCell className="text-right">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -178,12 +205,28 @@ export default function DocumentsPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            
+                            {/* Visualizar */}
+                            <DropdownMenuItem onSelect={() => handleViewDocument(doc.id)} className="cursor-pointer font-medium">
+                                <Eye className="mr-2 h-4 w-4" />
+                                <span>Visualizar</span>
+                            </DropdownMenuItem>
+
+                            {/* Baixar */}
                             <DropdownMenuItem onSelect={() => handleDownload(doc.id)} className="cursor-pointer">
                                 <Download className="mr-2 h-4 w-4" />
                                 <span>Baixar Original</span>
                             </DropdownMenuItem>
 
-                            {/* Apenas mostra Cancelar se tiver permissão E o documento não estiver finalizado/cancelado */}
+                            {/* Mover (Admin/Manager) */}
+                            {canManage && (
+                                <DropdownMenuItem onSelect={() => setMoveDoc(doc)} className="cursor-pointer">
+                                    <Move className="mr-2 h-4 w-4" />
+                                    <span>Mover para...</span>
+                                </DropdownMenuItem>
+                            )}
+
+                            {/* Cancelar (Admin/Manager, se não finalizado) */}
                             {canManage && doc.status !== 'SIGNED' && doc.status !== 'CANCELLED' && doc.status !== 'EXPIRED' && (
                                 <>
                                     <DropdownMenuSeparator />
@@ -216,6 +259,7 @@ export default function DocumentsPage() {
                                 <TableRow>
                                     <TableHead className="w-[50px]"><Checkbox /></TableHead>
                                     <TableHead>Documento</TableHead>
+                                    <TableHead>Local</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Assinantes</TableHead>
                                     <TableHead>Criado Em</TableHead>
@@ -233,11 +277,28 @@ export default function DocumentsPage() {
                             <div className="text-sm text-muted-foreground">
                                 Mostrando {documents.length} registro(s)
                             </div>
-                            {/* Paginação futura pode entrar aqui */}
                         </CardFooter>
                     )}
                 </Card>
             </main>
+
+            {/* MODAL DE MOVER DOCUMENTO */}
+            <Modal_MoveDocument 
+                open={!!moveDoc}
+                onOpenChange={(open) => !open && setMoveDoc(null)}
+                document={moveDoc}
+                onSuccess={() => {
+                    setMoveDoc(null);
+                    fetchDocuments(); // Recarrega a lista para atualizar a pasta
+                }}
+            />
+
+            {/* MODAL DE VISUALIZAÇÃO INTERNA */}
+            <Modal_ViewDocument 
+                open={!!viewDocId}
+                onOpenChange={(open) => !open && setViewDocId(null)}
+                documentId={viewDocId}
+            />
         </>
     );
 }
