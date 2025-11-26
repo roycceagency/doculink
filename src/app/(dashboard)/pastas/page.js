@@ -337,13 +337,7 @@ export default function FoldersPage() {
                 
                 {canEdit && !debouncedSearch && (
                     <div className="flex gap-2 w-full md:w-auto">
-                        <div className="relative">
-                            <input type="file" id="upload-file" className="hidden" onChange={handleFileUpload} disabled={uploading} accept=".pdf" />
-                            <label htmlFor="upload-file">
-                                <Button asChild variant="outline" className="cursor-pointer border-blue-200 text-blue-700 hover:bg-blue-50" disabled={uploading}>
-                                    <span>{uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UploadCloud className="h-4 w-4 mr-2" />} Upload Aqui</span>
-                                </Button>
-                            </label>
+                        <div className="relative">                 
                         </div>
                         <Button onClick={() => setIsCreateOpen(true)} className="bg-[#1c4ed8] hover:bg-[#1c4ed8]/90">
                             <Plus className="mr-2 h-4 w-4" /> Nova Pasta
