@@ -22,7 +22,6 @@ const masks = {
     cpf: (v) => v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})/, "$1-$2").slice(0, 14),
     phone: (v) => v.replace(/\D/g, "").replace(/^(\d{2})(\d)/g, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2").slice(0, 15),
     ccv: (v) => v.replace(/\D/g, "").slice(0, 4),
-    // --- NOVO: MÁSCARA DE CEP ---
     cep: (v) => v.replace(/\D/g, "").replace(/^(\d{5})(\d)/, "$1-$2").slice(0, 9)
 };
 
@@ -33,7 +32,6 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
     const [pixData, setPixData] = useState(null);
     const [copied, setCopied] = useState(false);
     
-    // --- ATUALIZADO: Estado com CEP e Número ---
     const [formData, setFormData] = useState({
         holderName: user?.name || "",
         number: "",
@@ -41,15 +39,14 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
         ccv: "",
         cpfCnpj: user?.cpf || "",
         phone: user?.phoneWhatsE164 || "",
-        postalCode: "", // Novo campo
-        addressNumber: "" // Novo campo
+        postalCode: "", 
+        addressNumber: "" 
     });
 
     useEffect(() => {
         if (open) {
             setPixData(null);
             setLoading(false);
-            // Resetar ou preencher dados iniciais se necessário
         }
     }, [open]);
 
@@ -57,13 +54,11 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
         const { id, value } = e.target;
         let formattedValue = value;
         
-        // Aplica máscaras
         if (id === 'number') formattedValue = masks.card(value);
         if (id === 'expiry') formattedValue = masks.expiry(value);
         if (id === 'ccv') formattedValue = masks.ccv(value);
         if (id === 'cpfCnpj') formattedValue = masks.cpf(value);
         if (id === 'phone') formattedValue = masks.phone(value);
-        // --- NOVO: Máscara de CEP ---
         if (id === 'postalCode') formattedValue = masks.cep(value);
 
         setFormData(prev => ({ ...prev, [id]: formattedValue }));
@@ -78,7 +73,6 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
             };
 
             if (paymentMethod === 'CREDIT_CARD') {
-                // Validações básicas no front antes de enviar
                 if (!formData.postalCode || formData.postalCode.length < 9) {
                     alert("Por favor, preencha um CEP válido.");
                     setLoading(false);
@@ -95,13 +89,12 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
                     ccv: formData.ccv
                 };
                 
-                // --- ATUALIZADO: Payload com CEP correto ---
                 payload.creditCardHolderInfo = {
                     name: formData.holderName,
                     email: user.email,
                     cpfCnpj: formData.cpfCnpj.replace(/\D/g, ""),
-                    postalCode: formData.postalCode.replace(/\D/g, ""), // Envia apenas números
-                    addressNumber: formData.addressNumber || "0", // Envia o número ou 0
+                    postalCode: formData.postalCode.replace(/\D/g, ""),
+                    addressNumber: formData.addressNumber || "0",
                     phone: formData.phone.replace(/\D/g, "")
                 };
             }
@@ -121,7 +114,6 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
 
         } catch (error) {
             console.error("Erro no pagamento:", error);
-            // Melhora a mensagem de erro para o usuário
             const msg = error.response?.data?.message || "Erro ao processar pagamento.";
             alert(msg);
         } finally {
@@ -181,13 +173,12 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
                                 </div>
                             </div>
                             
-                            {/* SEPARADOR VISUAL */}
                             <div className="relative my-4">
                                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
                                 <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">Dados do Titular</span></div>
                             </div>
 
-                            {/* DADOS DO TITULAR (CPF + CONTATO) */}
+                            {/* DADOS DO TITULAR */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
@@ -199,7 +190,6 @@ function CheckoutDialog({ open, onOpenChange, plan, user }) {
                                 </div>
                             </div>
 
-                            {/* --- NOVO: CEP E NÚMERO --- */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="postalCode">CEP</Label>
@@ -297,13 +287,20 @@ const UsageBar = ({ label, value, total, unit }) => {
     );
 };
 
-// --- DADOS DOS PLANOS ---
+// --- DADOS DOS PLANOS (ATUALIZADO COM GRATUITO) ---
 const AVAILABLE_PLANS = [
+    {
+        name: 'Gratuito',
+        slug: 'gratuito', // Slug interno para identificação
+        price: '0.00',
+        features: ['Até 3 Documentos', '1 Usuário', 'Acesso disponível sempre', 'Validade jurídica'],
+        highlight: false
+    },
     {
         name: 'Básico',
         slug: 'basico',
         price: '29.90',
-        features: ['Até 20 Documentos', '3 Usuários', 'Suporte via WhatsApp', 'Validade jurídica', 'Armazenamento seguro'],
+        features: ['Até 20 Documentos', '3 Usuários', 'Suporte via WhatsApp', 'Armazenamento seguro'],
         highlight: false
     },
     {
@@ -353,7 +350,7 @@ export default function PlanPage() {
     };
 
     const handleCancelSubscription = async () => {
-        if(!confirm("Tem certeza que deseja cancelar sua assinatura? Seus limites serão reduzidos.")) return;
+        if(!confirm("Tem certeza que deseja cancelar sua assinatura? Você voltará para o plano Gratuito.")) return;
         
         try {
             await api.delete('/subscription');
@@ -372,7 +369,8 @@ export default function PlanPage() {
             <>
                 <Header leftContent={headerLeftContent} actionButtonText="Enviar Documento" />
                 <main className="flex-1 p-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <Skeleton className="h-64 w-full rounded-xl" />
                         <Skeleton className="h-64 w-full rounded-xl" />
                         <Skeleton className="h-64 w-full rounded-xl" />
                         <Skeleton className="h-64 w-full rounded-xl" />
@@ -382,12 +380,22 @@ export default function PlanPage() {
         );
     }
 
-    // Dados seguros com fallback
-    const currentSlug = tenantData?.plan?.slug || 'basico';
+    // --- LÓGICA DE DADOS DO PLANO ---
+    const currentPlan = tenantData?.plan;
+    
+    // Slug atual: se plan for null, é 'gratuito'
+    const currentSlug = currentPlan?.slug || 'gratuito'; 
+    
+    // Nome do plano para exibição
+    const currentPlanName = currentPlan?.name || 'Gratuito';
+
+    // Limites: se plan for null, usamos limites do Gratuito (3 docs, 1 user)
     const limits = {
-        documents: tenantData?.plan?.documentLimit || 20,
-        users: tenantData?.plan?.userLimit || 3
+        documents: currentPlan?.documentLimit || 3,
+        users: currentPlan?.userLimit || 1
     };
+
+    // Uso: vem do objeto usage
     const usage = {
         documents: tenantData?.usage?.documents || 0,
         users: tenantData?.usage?.users || 0
@@ -410,7 +418,7 @@ export default function PlanPage() {
                                 <div>
                                     <div className="flex items-center gap-3">
                                         <CardTitle className="text-xl font-bold text-gray-800">
-                                            Plano Atual: {tenantData?.plan?.name || 'Básico'}
+                                            Plano Atual: {currentPlanName}
                                         </CardTitle>
                                         {isPending && <Badge variant="outline" className="text-yellow-600 border-yellow-500">Pagamento Pendente</Badge>}
                                         {tenantData?.subscriptionStatus === 'OVERDUE' && <Badge variant="destructive">Pagamento Atrasado</Badge>}
@@ -419,7 +427,8 @@ export default function PlanPage() {
                                         Renovação mensal. Gerencie seus limites abaixo.
                                     </CardDescription>
                                 </div>
-                                {canManageBilling && isSubActive && currentSlug !== 'basico' && (
+                                {/* O único plano que não pode cancelar é o gratuito */}
+                                {canManageBilling && currentSlug !== 'gratuito' && (
                                     <Button 
                                         variant="ghost" 
                                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -453,7 +462,7 @@ export default function PlanPage() {
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 mb-6">Planos Disponíveis</h2>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {AVAILABLE_PLANS.map((plan) => {
                             const isCurrent = plan.slug === currentSlug;
                             
