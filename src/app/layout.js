@@ -2,7 +2,8 @@
 
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
+// SUBSTITUIR: AuthProvider pelo ClientProviders que criamos acima
+import ClientProviders from "../components/providers/ClientProviders"; 
 import 'react-international-phone/style.css';
 
 const geistSans = Geist({
@@ -22,12 +23,12 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    // CORREÇÃO AQUI: Mude para pt-BR e adicione suppressHydrationWarning
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
+        {/* Usamos o ClientProviders para envolver a aplicação com todos os contextos */}
+        <ClientProviders>
           {children}
-        </AuthProvider>
+        </ClientProviders>
       </body>
     </html>
   );

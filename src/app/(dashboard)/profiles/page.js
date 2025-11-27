@@ -16,6 +16,9 @@ import { Mail, Plus, UserCog, Clock, Shield, Eye, FileText } from "lucide-react"
 import Modal_InviteMember from './_components/Modal_InviteMember';
 import Sheet_MemberDetails from './_components/Sheet_MemberDetails';
 
+// 1. IMPORTAR O HOOK DE VERIFICAÇÃO DE LIMITE
+import { useLimitCheck } from '@/hooks/useLimitCheck';
+
 export default function ProfilesPage() {
     const [activeMembers, setActiveMembers] = useState([]);
     const [pendingInvites, setPendingInvites] = useState([]);
@@ -25,6 +28,9 @@ export default function ProfilesPage() {
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
+
+    // 2. INICIALIZAR O HOOK
+    const { checkLimit } = useLimitCheck();
 
     const fetchData = async () => {
         setLoading(true);
@@ -47,6 +53,15 @@ export default function ProfilesPage() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // 3. FUNÇÃO QUE VALIDA ANTES DE ABRIR O MODAL
+    const handleOpenInviteModal = () => {
+        // Verifica se o usuário atingiu o limite de membros do plano
+        // Se checkLimit retornar false, ele já abriu o UpgradeModal sozinho e paramos aqui.
+        if (!checkLimit('USERS')) return;
+
+        setIsInviteModalOpen(true);
+    };
 
     const handleViewDetails = (member) => {
         setSelectedMember(member);
@@ -85,7 +100,9 @@ export default function ProfilesPage() {
                 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <h2 className="text-xl font-semibold text-gray-800">Membros da Equipe</h2>
-                    <Button onClick={() => setIsInviteModalOpen(true)} className="bg-[#1c4ed8] hover:bg-[#1c4ed8]/90 shadow-sm">
+                    
+                    {/* 4. ALTERAR O onClick DO BOTÃO */}
+                    <Button onClick={handleOpenInviteModal} className="bg-[#1c4ed8] hover:bg-[#1c4ed8]/90 shadow-sm">
                         <Plus className="mr-2 h-4 w-4" /> Convidar Novo
                     </Button>
                 </div>
@@ -207,7 +224,7 @@ export default function ProfilesPage() {
 
             </main>
 
-            {/* MODAL DE CONVITE (Aprimorado) */}
+            {/* MODAL DE CONVITE */}
             <Modal_InviteMember 
                 open={isInviteModalOpen} 
                 onOpenChange={setIsInviteModalOpen} 

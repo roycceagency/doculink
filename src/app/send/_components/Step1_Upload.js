@@ -9,6 +9,9 @@ import api from '@/lib/api';
 
 import Modal_SelectFolder from './Modal_SelectFolder';
 
+// 1. IMPORTAR O HOOK DE VALIDAÇÃO
+import { useLimitCheck } from '../../../hooks/useLimitCheck';
+
 export default function Step1_Upload({ onNext, onDocumentUploaded, onCancel }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,6 +19,9 @@ export default function Step1_Upload({ onNext, onDocumentUploaded, onCancel }) {
   // Estado da pasta selecionada (Default: Raiz)
   const [selectedFolder, setSelectedFolder] = useState({ id: null, name: 'Início (Raiz)' });
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+
+  // 2. INICIALIZAR O HOOK
+  const { checkLimit } = useLimitCheck();
 
   const onDrop = (acceptedFiles) => {
     setFile(acceptedFiles[0]);
@@ -29,6 +35,12 @@ export default function Step1_Upload({ onNext, onDocumentUploaded, onCancel }) {
 
   const handleNext = async () => {
     if (!file) return;
+
+    // 3. VALIDAÇÃO PROATIVA DE LIMITE
+    // Verifica se o usuário tem cota de documentos antes de tentar enviar
+    // Se retornar false, o modal de upgrade abre automaticamente.
+    if (!checkLimit('DOCUMENTS')) return;
+
     setLoading(true);
     const formData = new FormData();
     formData.append('documentFile', file);
@@ -50,8 +62,16 @@ export default function Step1_Upload({ onNext, onDocumentUploaded, onCancel }) {
       onNext();
     } catch (error) {
       console.error("Falha no upload:", error);
+      // Nota: Se o erro for 403 de limite (caso o contexto do front esteja desatualizado),
+      // o nosso interceptor do axios (api.js) vai pegar e abrir o modal também.
+      // Aqui tratamos erros genéricos de upload.
       const msg = error.response?.data?.message || "Erro ao enviar o documento.";
-      alert(msg);
+      
+      // Só mostramos o alert se NÃO for erro de limite (pois o modal já cuidaria disso via interceptor)
+      if (!msg.includes('Limite') && !msg.includes('upgrade')) {
+          alert(msg);
+      }
+      
       setLoading(false);
     }
   };
