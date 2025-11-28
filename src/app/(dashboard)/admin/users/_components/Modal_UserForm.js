@@ -93,8 +93,8 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <AuthInput id="cpf" label="CPF" mask="999.999.999-99" value={formData.cpf} onChange={handleChange} />
-            <AuthInput id="phone" label="Celular (Whatsapp)" mask="(99) 99999-9999" value={formData.phone} onChange={handleChange} />
+            <AuthInput id="cpf" label="CPF" value={formData.cpf} onChange={handleChange} />
+            <AuthInput id="phone" label="Celular (Whatsapp)" value={formData.phone} onChange={handleChange} />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
