@@ -10,9 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input"; // Importando Input diretamente para customizar o layout do telefone
+import { Input } from "@/components/ui/input"; 
 
-// Lista de países com Bandeira e DDI
+// Lista de países
 const countryCodes = [
   { name: "Brasil", code: "+55", flag: "🇧🇷" },
   { name: "Estados Unidos", code: "+1", flag: "🇺🇸" },
@@ -33,17 +33,17 @@ const countryCodes = [
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  
+  // --- AJUSTE AQUI: O telefone já inicia com +55 ---
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     cpf: "",
-    phone: "",
+    phone: "+55 ", // Já começa preenchido visualmente
     password: "",
   });
   
-  // Estado para o DDI selecionado (Padrão Brasil)
   const [selectedDDI, setSelectedDDI] = useState("+55");
-
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -52,25 +52,12 @@ export default function RegisterPage() {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
-  // Função para lidar com a troca de país
   const handleCountryChange = (e) => {
     const newDDI = e.target.value;
     setSelectedDDI(newDDI);
     
-    // Atualiza o input de telefone com o novo DDI
-    // Mantém o que o usuário já digitou se ele apenas trocou a bandeira,
-    // ou apenas seta o DDI se estiver vazio.
-    const currentPhone = formData.phone;
-    
-    // Se o telefone já começar com um DDI (ex: +1), removemos e colocamos o novo
-    // Se estiver vazio, apenas coloca o DDI
-    if (!currentPhone) {
-        setFormData({ ...formData, phone: newDDI + " " });
-    } else {
-        // Lógica simples: substitui o prefixo ou adiciona na frente
-        // Aqui optamos por limpar e setar o DDI para garantir formato correto
-        setFormData({ ...formData, phone: newDDI + " " });
-    }
+    // Atualiza o campo de texto para o novo código
+    setFormData({ ...formData, phone: newDDI + " " });
   };
 
   const handleSubmit = async (e) => {
@@ -139,18 +126,16 @@ export default function RegisterPage() {
                     {/* Select de Bandeiras */}
                     <div className="relative">
                         <select
-                            className="h-10 w-[80px] appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer text-center"
+                            className="h-10 w-[85px] appearance-none rounded-md border border-input bg-background px-3 py-2 text-lg ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer text-center"
                             value={selectedDDI}
                             onChange={handleCountryChange}
                         >
                             {countryCodes.map((country) => (
                                 <option key={country.name} value={country.code}>
-                                    {country.flag} {country.code}
+                                    {country.flag}
                                 </option>
                             ))}
                         </select>
-                        {/* Ícone customizado de seta para baixo pode ser adicionado aqui com CSS, 
-                            mas o select nativo já resolve bem mobile/desktop */}
                     </div>
 
                     {/* Input de Telefone */}
