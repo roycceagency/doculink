@@ -7,18 +7,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AuthInput } from '@/components/auth/AuthInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input"; // Importante para o input de telefone customizado
+
+// Lista de países para o seletor
+const countryCodes = [
+  { name: "Brasil", code: "+55", flag: "🇧🇷" },
+  { name: "Estados Unidos", code: "+1", flag: "🇺🇸" },
+  { name: "Portugal", code: "+351", flag: "🇵🇹" },
+  { name: "Reino Unido", code: "+44", flag: "🇬🇧" },
+  { name: "Espanha", code: "+34", flag: "🇪🇸" },
+  { name: "França", code: "+33", flag: "🇫🇷" },
+  { name: "Alemanha", code: "+49", flag: "🇩🇪" },
+  { name: "Argentina", code: "+54", flag: "🇦🇷" },
+  { name: "Uruguai", code: "+598", flag: "🇺🇾" },
+  { name: "Paraguai", code: "+595", flag: "🇵🇾" },
+];
 
 export default function Modal_UserForm({ open, onOpenChange, onSave, existingUser }) {
+  // Estado inicial
   const [formData, setFormData] = useState({ 
     name: '', 
     email: '', 
-    password: '', // Novo campo (obrigatório na criação)
+    password: '', 
     cpf: '',
-    phone: '',
-    role: 'USER', 
+    phone: '+55 ', // Inicia com padrão Brasil na criação
+    role: 'ADMIN', // Padrão ADMIN pois ele será dono da própria empresa
     status: 'ACTIVE'
   });
   
+  const [selectedDDI, setSelectedDDI] = useState("+55");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,19 +43,32 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
     if (open) {
       setError('');
       if (existingUser) {
+        // Lógica para extrair o DDI do telefone existente (se houver)
+        let phoneVal = existingUser.phoneWhatsE164 || '';
+        let ddi = "+55"; // fallback
+
+        // Tenta encontrar qual DDI o número usa
+        const foundCountry = countryCodes.find(c => phoneVal.startsWith(c.code));
+        if (foundCountry) {
+            ddi = foundCountry.code;
+        }
+
+        setSelectedDDI(ddi);
+
         setFormData({
           name: existingUser.name || '',
           email: existingUser.email || '',
-          password: '', // Na edição, senha vazia significa "não alterar"
+          password: '', 
           cpf: existingUser.cpf || '',
-          phone: existingUser.phoneWhatsE164 || '', // Mapeando do backend
-          role: existingUser.role || 'USER',
+          phone: phoneVal,
+          role: existingUser.role || 'ADMIN',
           status: existingUser.status || 'ACTIVE',
         });
       } else {
         // Reset para criação
+        setSelectedDDI("+55");
         setFormData({ 
-            name: '', email: '', password: '', cpf: '', phone: '', role: 'USER', status: 'ACTIVE' 
+            name: '', email: '', password: '', cpf: '', phone: '+55 ', role: 'ADMIN', status: 'ACTIVE' 
         });
       }
     }
@@ -50,6 +80,14 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
 
   const handleSelectChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Lógica da troca de bandeira
+  const handleCountryChange = (e) => {
+    const newDDI = e.target.value;
+    setSelectedDDI(newDDI);
+    // Atualiza o input mantendo o fluxo
+    setFormData(prev => ({ ...prev, phone: newDDI + " " }));
   };
 
   const handleSave = async () => {
@@ -82,7 +120,7 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-gray-800 text-center">
-            {existingUser ? 'Editar Usuário' : 'Novo Usuário'}
+            {existingUser ? 'Editar Usuário' : 'Novo Usuário (Nova Organização)'}
           </DialogTitle>
         </DialogHeader>
         
@@ -93,8 +131,35 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <AuthInput id="cpf" label="CPF" value={formData.cpf} onChange={handleChange} />
-            <AuthInput id="phone" label="Celular (Whatsapp)" value={formData.phone} onChange={handleChange} />
+            <AuthInput id="cpf" label="CPF" value={formData.cpf} onChange={handleChange} mask="999.999.999-99" />
+            
+            {/* INPUT DE TELEFONE COM BANDEIRA */}
+            <div className="space-y-1.5">
+                <Label htmlFor="phone">Celular (Whatsapp)</Label>
+                <div className="flex w-full items-center gap-2">
+                    <div className="relative">
+                        <select
+                            className="h-10 w-[70px] appearance-none rounded-md border border-input bg-background px-2 py-2 text-lg ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer text-center"
+                            value={selectedDDI}
+                            onChange={handleCountryChange}
+                        >
+                            {countryCodes.map((country) => (
+                                <option key={country.name} value={country.code}>
+                                    {country.flag}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="flex-1"
+                        placeholder="+55 11 99999-9999"
+                    />
+                </div>
+            </div>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -103,8 +168,8 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
                 <Select value={formData.role} onValueChange={(v) => handleSelectChange('role', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="ADMIN">Admin (Dono)</SelectItem>
                         <SelectItem value="USER">Usuário Comum</SelectItem>
-                        <SelectItem value="ADMIN">Administrador</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -121,7 +186,7 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
             </div>
           </div>
 
-          {/* Campo de Senha (Diferente para Criação e Edição) */}
+          {/* Campo de Senha */}
           <div className="pt-2">
              <AuthInput 
                 id="password" 
