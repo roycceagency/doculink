@@ -15,7 +15,7 @@ import { useLimitCheck } from '../../../hooks/useLimitCheck';
 export default function Step1_Upload({ onNext, onDocumentUploaded, onCancel }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Estado da pasta selecionada (Default: Raiz)
   const [selectedFolder, setSelectedFolder] = useState({ id: null, name: 'Início (Raiz)' });
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
@@ -27,30 +27,31 @@ export default function Step1_Upload({ onNext, onDocumentUploaded, onCancel }) {
     setFile(acceptedFiles[0]);
   };
 
+  // Agora aceita QUALQUER DOCUMENTO (PDF, imagens, docx, etc)
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
       onDrop, 
       multiple: false,
-      accept: { 'application/pdf': ['.pdf'] }
+      accept: {
+        // Aceitar qualquer tipo de arquivo
+        '*/*': ['.*']
+      }
   });
 
   const handleNext = async () => {
     if (!file) return;
 
     // 3. VALIDAÇÃO PROATIVA DE LIMITE
-    // Verifica se o usuário tem cota de documentos antes de tentar enviar
-    // Se retornar false, o modal de upgrade abre automaticamente.
     if (!checkLimit('DOCUMENTS')) return;
 
     setLoading(true);
     const formData = new FormData();
     formData.append('documentFile', file);
     formData.append('title', file.name);
-    
+
     // Envia o ID da pasta selecionada (se não for null)
     if (selectedFolder.id) {
         formData.append('folderId', selectedFolder.id);
     } else {
-        // Se for raiz, opcionalmente manda 'root' ou nada, o backend trata
         formData.append('folderId', 'root');
     }
 
@@ -62,12 +63,8 @@ export default function Step1_Upload({ onNext, onDocumentUploaded, onCancel }) {
       onNext();
     } catch (error) {
       console.error("Falha no upload:", error);
-      // Nota: Se o erro for 403 de limite (caso o contexto do front esteja desatualizado),
-      // o nosso interceptor do axios (api.js) vai pegar e abrir o modal também.
-      // Aqui tratamos erros genéricos de upload.
       const msg = error.response?.data?.message || "Erro ao enviar o documento.";
       
-      // Só mostramos o alert se NÃO for erro de limite (pois o modal já cuidaria disso via interceptor)
       if (!msg.includes('Limite') && !msg.includes('upgrade')) {
           alert(msg);
       }
@@ -93,7 +90,7 @@ export default function Step1_Upload({ onNext, onDocumentUploaded, onCancel }) {
             <div className="p-4 bg-blue-100 text-blue-600 rounded-full mb-4">
                 <UploadCloud className="h-10 w-10" />
             </div>
-            <p className="text-lg font-semibold text-gray-700">Clique ou arraste seu PDF aqui</p>
+            <p className="text-lg font-semibold text-gray-700">Clique ou arraste seu documento aqui</p>
             <p className="text-sm text-gray-500 mt-1">Tamanho máximo: 20MB</p>
           </div>
       )}
@@ -106,8 +103,8 @@ export default function Step1_Upload({ onNext, onDocumentUploaded, onCancel }) {
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-red-50 rounded-lg border border-red-100">
-                            <FileText className="h-8 w-8 text-red-600" />
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <FileText className="h-8 w-8 text-blue-600" />
                         </div>
                         <div>
                             <p className="text-sm text-gray-500 font-medium">Documento Selecionado</p>

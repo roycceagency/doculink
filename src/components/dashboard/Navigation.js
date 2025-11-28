@@ -52,7 +52,7 @@ const navLinksTenantAdmin = [
 
 // 3. LINKS DA PLATAFORMA (Super Admin Global)
 const navLinksSuperAdmin = [
-  { href: "/profiles", label: "Todos Usuários", icon: User }, 
+  { href: "/admin/users", label: "Todos Usuários", icon: User }, 
   { href: "/admin/documents", label: "Todos Documentos", icon: FileText },
   { href: "/admin/payments", label: "Financeiro Global", icon: CreditCard },
   { href: "/admin/plans", label: "Planos", icon: Shield },
