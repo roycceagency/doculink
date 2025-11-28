@@ -48,7 +48,6 @@ export default function RegisterPage() {
     <div className="flex min-h-screen w-full items-center justify-center bg-[#f1f5f9] p-4 py-8">
       <Card className="w-full max-w-md bg-white shadow-lg border-none rounded-xl">
         <CardHeader className="space-y-2 flex flex-col items-center pb-2">
-          {/* LOGO ADICIONADO NO TOPO */}
           <div className="mb-2">
             <Image 
               src="/logo.png" 
@@ -87,14 +86,16 @@ export default function RegisterPage() {
               required
               onChange={handleChange}
             />
+
+            {/* TELEFONE SEM MÁSCARA */}
             <AuthInput
               id="phone"
               label="Celular"
-              mask="(99) 99999-9999"
-              placeholder="(00) 00000-0000"
+              placeholder="+55 11 99999-9999"
               required
               onChange={handleChange}
             />
+
             <AuthInput
               id="password"
               label="Crie uma Senha"
@@ -103,7 +104,6 @@ export default function RegisterPage() {
               onChange={handleChange}
             />
 
-            {/* CHECKBOX COM OS LINKS SOLICITADOS */}
             <div className="flex items-start space-x-2 pt-2">
               <Checkbox 
                 id="terms" 
