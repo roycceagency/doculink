@@ -34,7 +34,7 @@ const PaymentBadge = ({ status }) => {
     
     const labels = { 
         ACTIVE: "Em dia", 
-        PENDING: "Pendente", 
+        PENDING: "Pago", 
         OVERDUE: "Atrasado", 
         CANCELED: "Cancelado" 
     };
@@ -200,7 +200,7 @@ export default function AdminPaymentsPage() {
                                 <SelectContent>
                                     <SelectItem value="all">Todos</SelectItem>
                                     <SelectItem value="ACTIVE">Em dia</SelectItem>
-                                    <SelectItem value="PENDING">Pendente</SelectItem>
+                                    <SelectItem value="PENDING">Pago</SelectItem>
                                     <SelectItem value="OVERDUE">Atrasado</SelectItem>
                                     <SelectItem value="CANCELED">Cancelado</SelectItem>
                                 </SelectContent>

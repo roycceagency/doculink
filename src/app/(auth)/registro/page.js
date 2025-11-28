@@ -10,6 +10,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input"; // Importando Input diretamente para customizar o layout do telefone
+
+// Lista de países com Bandeira e DDI
+const countryCodes = [
+  { name: "Brasil", code: "+55", flag: "🇧🇷" },
+  { name: "Estados Unidos", code: "+1", flag: "🇺🇸" },
+  { name: "Portugal", code: "+351", flag: "🇵🇹" },
+  { name: "Reino Unido", code: "+44", flag: "🇬🇧" },
+  { name: "Espanha", code: "+34", flag: "🇪🇸" },
+  { name: "França", code: "+33", flag: "🇫🇷" },
+  { name: "Alemanha", code: "+49", flag: "🇩🇪" },
+  { name: "Itália", code: "+39", flag: "🇮🇹" },
+  { name: "Argentina", code: "+54", flag: "🇦🇷" },
+  { name: "Uruguai", code: "+598", flag: "🇺🇾" },
+  { name: "Paraguai", code: "+595", flag: "🇵🇾" },
+  { name: "Chile", code: "+56", flag: "🇨🇱" },
+  { name: "Colômbia", code: "+57", flag: "🇨🇴" },
+  { name: "México", code: "+52", flag: "🇲🇽" },
+  { name: "Canadá", code: "+1", flag: "🇨🇦" },
+];
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -20,12 +40,37 @@ export default function RegisterPage() {
     phone: "",
     password: "",
   });
+  
+  // Estado para o DDI selecionado (Padrão Brasil)
+  const [selectedDDI, setSelectedDDI] = useState("+55");
+
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
+
+  // Função para lidar com a troca de país
+  const handleCountryChange = (e) => {
+    const newDDI = e.target.value;
+    setSelectedDDI(newDDI);
+    
+    // Atualiza o input de telefone com o novo DDI
+    // Mantém o que o usuário já digitou se ele apenas trocou a bandeira,
+    // ou apenas seta o DDI se estiver vazio.
+    const currentPhone = formData.phone;
+    
+    // Se o telefone já começar com um DDI (ex: +1), removemos e colocamos o novo
+    // Se estiver vazio, apenas coloca o DDI
+    if (!currentPhone) {
+        setFormData({ ...formData, phone: newDDI + " " });
+    } else {
+        // Lógica simples: substitui o prefixo ou adiciona na frente
+        // Aqui optamos por limpar e setar o DDI para garantir formato correto
+        setFormData({ ...formData, phone: newDDI + " " });
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -87,14 +132,39 @@ export default function RegisterPage() {
               onChange={handleChange}
             />
 
-            {/* TELEFONE SEM MÁSCARA */}
-            <AuthInput
-              id="phone"
-              label="Celular"
-              placeholder="+55 11 99999-9999"
-              required
-              onChange={handleChange}
-            />
+            {/* SEÇÃO DE TELEFONE CUSTOMIZADA */}
+            <div className="space-y-2">
+                <Label htmlFor="phone">Celular (Whatsapp)</Label>
+                <div className="flex w-full items-center gap-2">
+                    {/* Select de Bandeiras */}
+                    <div className="relative">
+                        <select
+                            className="h-10 w-[80px] appearance-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer text-center"
+                            value={selectedDDI}
+                            onChange={handleCountryChange}
+                        >
+                            {countryCodes.map((country) => (
+                                <option key={country.name} value={country.code}>
+                                    {country.flag} {country.code}
+                                </option>
+                            ))}
+                        </select>
+                        {/* Ícone customizado de seta para baixo pode ser adicionado aqui com CSS, 
+                            mas o select nativo já resolve bem mobile/desktop */}
+                    </div>
+
+                    {/* Input de Telefone */}
+                    <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+55 11 99999-9999"
+                        required
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="flex-1"
+                    />
+                </div>
+            </div>
 
             <AuthInput
               id="password"

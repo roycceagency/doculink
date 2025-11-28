@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import api from '@/lib/api'; // Importando o cliente Axios configurado
+import api from '@/lib/api'; 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -20,7 +20,7 @@ import { MoreHorizontal, Search, Plus, Pencil, Trash2, UserCheck, Ban } from "lu
 
 import Modal_UserForm from './_components/Modal_UserForm';
 
-// Componentes visuais auxiliares
+// Componente visual para Status
 const StatusBadge = ({ status }) => {
     const styles = {
         ACTIVE: "bg-green-100 text-green-700 border-green-200",
@@ -29,6 +29,26 @@ const StatusBadge = ({ status }) => {
     };
     const labels = { ACTIVE: "Ativo", INACTIVE: "Inativo", BLOCKED: "Bloqueado" };
     return <Badge variant="outline" className={styles[status] || styles.INACTIVE}>{labels[status] || status}</Badge>;
+};
+
+// --- NOVO: Componente visual para Função (Role) ---
+const RoleBadge = ({ role }) => {
+    if (role === 'SUPER_ADMIN') {
+        return (
+            <Badge className="bg-purple-600 hover:bg-purple-700 text-white border-none shadow-sm">
+                Super Admin
+            </Badge>
+        );
+    }
+    if (role === 'ADMIN') {
+        return (
+            <Badge className="bg-gray-800 hover:bg-gray-900 text-white border-none">
+                Admin
+            </Badge>
+        );
+    }
+    // Fallback para usuários comuns
+    return <span className="text-sm text-gray-600 font-medium">Usuário</span>;
 };
 
 export default function AdminUsersPage() {
@@ -58,7 +78,7 @@ export default function AdminUsersPage() {
         fetchUsers();
     }, []);
 
-    // Filtragem local (Client-side search para rapidez)
+    // Filtragem local
     const filteredUsers = useMemo(() => {
         return users.filter(u => 
             u.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -69,17 +89,12 @@ export default function AdminUsersPage() {
     // --- 2. CRIAR OU EDITAR USUÁRIO ---
     const handleSaveUser = async (formData) => {
         if (editingUser) {
-            // EDITAR (PATCH)
-            // Remove senha se estiver vazia para não enviar string vazia
             const payload = { ...formData };
             if (!payload.password) delete payload.password;
 
             await api.patch(`/users/${editingUser.id}`, payload);
-            
-            // Atualiza lista localmente para feedback instantâneo ou recarrega
             fetchUsers(); 
         } else {
-            // CRIAR (POST)
             await api.post('/users', formData);
             fetchUsers();
         }
@@ -90,21 +105,18 @@ export default function AdminUsersPage() {
         if (confirm("Tem certeza que deseja remover este usuário permanentemente?")) {
             try {
                 await api.delete(`/users/${id}`);
-                setUsers(users.filter(u => u.id !== id)); // Otimista
+                setUsers(users.filter(u => u.id !== id));
             } catch (error) {
                 alert(error.response?.data?.message || "Erro ao excluir usuário.");
             }
         }
     };
 
-    // --- 4. BLOQUEAR/DESBLOQUEAR RÁPIDO ---
+    // --- 4. BLOQUEAR/DESBLOQUEAR ---
     const handleToggleStatus = async (user) => {
         const newStatus = user.status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE';
         try {
-            // Reutiliza o endpoint de update
             await api.patch(`/users/${user.id}`, { status: newStatus });
-            
-            // Atualiza estado local
             setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
         } catch (error) {
             alert("Erro ao alterar status.");
@@ -132,7 +144,7 @@ export default function AdminUsersPage() {
         <>
             <Header 
                 leftContent={headerLeftContent} 
-                actionButtonText={null} // Removemos o botão padrão do header para usar o da toolbar
+                actionButtonText={null} 
             />
 
             <main className="flex-1 p-6 space-y-6">
@@ -159,6 +171,7 @@ export default function AdminUsersPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Nome / Email</TableHead>
+                                    <TableHead>Empresa (Tenant)</TableHead>
                                     <TableHead>Função</TableHead>
                                     <TableHead>Celular</TableHead>
                                     <TableHead>Status</TableHead>
@@ -170,12 +183,12 @@ export default function AdminUsersPage() {
                                 {loading ? (
                                     Array.from({ length: 5 }).map((_, i) => (
                                         <TableRow key={i}>
-                                            <TableCell colSpan={6}><Skeleton className="h-12 w-full" /></TableCell>
+                                            <TableCell colSpan={7}><Skeleton className="h-12 w-full" /></TableCell>
                                         </TableRow>
                                     ))
                                 ) : filteredUsers.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                                        <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                                             Nenhum usuário encontrado.
                                         </TableCell>
                                     </TableRow>
@@ -188,13 +201,17 @@ export default function AdminUsersPage() {
                                                     <span className="text-xs text-muted-foreground">{user.email}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
-                                                {user.role === 'ADMIN' ? (
-                                                    <Badge variant="default" className="bg-gray-800 hover:bg-gray-900">Admin</Badge>
-                                                ) : (
-                                                    <span className="text-sm text-gray-600">Usuário</span>
-                                                )}
+                                            
+                                            {/* Coluna da Empresa (útil para Super Admin ver de onde é o usuário) */}
+                                            <TableCell className="text-sm text-gray-600">
+                                                {user.ownTenant?.name || '-'}
                                             </TableCell>
+
+                                            <TableCell>
+                                                {/* Usando o novo componente RoleBadge */}
+                                                <RoleBadge role={user.role} />
+                                            </TableCell>
+                                            
                                             <TableCell className="text-sm text-gray-600">
                                                 {user.phoneWhatsE164 || '-'}
                                             </TableCell>
