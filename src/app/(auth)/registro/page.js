@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input"; 
+import { Input } from "@/components/ui/input";
+import { PhoneInput } from 'react-international-phone';
+import 'react-international-phone/style.css';
 
 // Lista de países
 const countryCodes = [
@@ -33,7 +35,7 @@ const countryCodes = [
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  
+
   // --- AJUSTE AQUI: O telefone já inicia com +55 ---
   const [formData, setFormData] = useState({
     name: "",
@@ -42,7 +44,7 @@ export default function RegisterPage() {
     phone: "+55 ", // Já começa preenchido visualmente
     password: "",
   });
-  
+
   const [selectedDDI, setSelectedDDI] = useState("+55");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -55,7 +57,7 @@ export default function RegisterPage() {
   const handleCountryChange = (e) => {
     const newDDI = e.target.value;
     setSelectedDDI(newDDI);
-    
+
     // Atualiza o campo de texto para o novo código
     setFormData({ ...formData, phone: newDDI + " " });
   };
@@ -81,12 +83,12 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md bg-white shadow-lg border-none rounded-xl">
         <CardHeader className="space-y-2 flex flex-col items-center pb-2">
           <div className="mb-2">
-            <Image 
-              src="/logo.png" 
-              alt="Doculink Logo" 
-              width={180} 
-              height={40} 
-              priority 
+            <Image
+              src="/logo.png"
+              alt="Doculink Logo"
+              width={180}
+              height={40}
+              priority
             />
           </div>
           <CardTitle className="text-2xl font-bold text-[#151928]">
@@ -119,36 +121,18 @@ export default function RegisterPage() {
               onChange={handleChange}
             />
 
-            {/* SEÇÃO DE TELEFONE CUSTOMIZADA */}
+            {/* SEÇÃO DE TELEFONE CUSTOMIZADA - AGORA USANDO REACT-INTERNATIONAL-PHONE */}
             <div className="space-y-2">
-                <Label htmlFor="phone">Celular (Whatsapp)</Label>
-                <div className="flex w-full items-center gap-2">
-                    {/* Select de Bandeiras */}
-                    <div className="relative">
-                        <select
-                            className="h-10 w-[85px] appearance-none rounded-md border border-input bg-background px-3 py-2 text-lg ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer text-center"
-                            value={selectedDDI}
-                            onChange={handleCountryChange}
-                        >
-                            {countryCodes.map((country) => (
-                                <option key={country.name} value={country.code}>
-                                    {country.flag}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Input de Telefone */}
-                    <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+55 11 99999-9999"
-                        required
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="flex-1"
-                    />
-                </div>
+              <Label htmlFor="phone">Celular (Whatsapp)</Label>
+              <div className="flex w-full items-center gap-2">
+                <PhoneInput
+                  defaultCountry="br"
+                  value={formData.phone}
+                  onChange={(phone) => setFormData({ ...formData, phone })}
+                  inputClassName="flex-1 !w-full !h-10 !text-base !bg-background !border-input !rounded-md"
+                  containerClassName="!w-full"
+                />
+              </div>
             </div>
 
             <AuthInput
@@ -160,25 +144,25 @@ export default function RegisterPage() {
             />
 
             <div className="flex items-start space-x-2 pt-2">
-              <Checkbox 
-                id="terms" 
+              <Checkbox
+                id="terms"
                 checked={termsAccepted}
                 onCheckedChange={setTermsAccepted}
               />
               <Label htmlFor="terms" className="text-xs leading-relaxed text-muted-foreground font-normal">
                 Concordo com os{" "}
-                <a 
-                  href="https://doculink.com.br/blog/2025/11/17/termos-de-uso/" 
-                  target="_blank" 
+                <a
+                  href="https://doculink.com.br/blog/2025/11/17/termos-de-uso/"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="font-bold text-[#151928] hover:underline"
                 >
                   Termos de Uso
                 </a>{" "}
                 e{" "}
-                <a 
-                  href="https://doculink.com.br/blog/2025/11/17/politica-de-privacidade/" 
-                  target="_blank" 
+                <a
+                  href="https://doculink.com.br/blog/2025/11/17/politica-de-privacidade/"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="font-bold text-[#151928] hover:underline"
                 >

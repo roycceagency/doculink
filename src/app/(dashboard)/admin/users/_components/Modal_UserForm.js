@@ -8,6 +8,8 @@ import { AuthInput } from '@/components/auth/AuthInput';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input"; // Importante para o input de telefone customizado
+import { PhoneInput } from 'react-international-phone';
+import 'react-international-phone/style.css';
 
 // Lista de países para o seletor
 const countryCodes = [
@@ -25,16 +27,16 @@ const countryCodes = [
 
 export default function Modal_UserForm({ open, onOpenChange, onSave, existingUser }) {
   // Estado inicial
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    email: '', 
-    password: '', 
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
     cpf: '',
     phone: '+55 ', // Inicia com padrão Brasil na criação
     role: 'ADMIN', // Padrão ADMIN pois ele será dono da própria empresa
     status: 'ACTIVE'
   });
-  
+
   const [selectedDDI, setSelectedDDI] = useState("+55");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,7 +52,7 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
         // Tenta encontrar qual DDI o número usa
         const foundCountry = countryCodes.find(c => phoneVal.startsWith(c.code));
         if (foundCountry) {
-            ddi = foundCountry.code;
+          ddi = foundCountry.code;
         }
 
         setSelectedDDI(ddi);
@@ -58,7 +60,7 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
         setFormData({
           name: existingUser.name || '',
           email: existingUser.email || '',
-          password: '', 
+          password: '',
           cpf: existingUser.cpf || '',
           phone: phoneVal,
           role: existingUser.role || 'ADMIN',
@@ -67,8 +69,8 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
       } else {
         // Reset para criação
         setSelectedDDI("+55");
-        setFormData({ 
-            name: '', email: '', password: '', cpf: '', phone: '+55 ', role: 'ADMIN', status: 'ACTIVE' 
+        setFormData({
+          name: '', email: '', password: '', cpf: '', phone: '+55 ', role: 'ADMIN', status: 'ACTIVE'
         });
       }
     }
@@ -93,25 +95,25 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
   const handleSave = async () => {
     // Validação básica
     if (!formData.name || !formData.email) {
-        setError("Nome e Email são obrigatórios.");
-        return;
+      setError("Nome e Email são obrigatórios.");
+      return;
     }
     if (!existingUser && !formData.password) {
-        setError("A senha é obrigatória para novos usuários.");
-        return;
+      setError("A senha é obrigatória para novos usuários.");
+      return;
     }
 
     setLoading(true);
     setError('');
-    
+
     try {
-        await onSave(formData);
-        onOpenChange(false);
+      await onSave(formData);
+      onOpenChange(false);
     } catch (err) {
-        console.error(err);
-        setError(err.response?.data?.message || "Erro ao salvar usuário.");
+      console.error(err);
+      setError(err.response?.data?.message || "Erro ao salvar usuário.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -123,7 +125,7 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
             {existingUser ? 'Editar Usuário' : 'Novo Usuário (Nova Organização)'}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
             <AuthInput id="name" label="Nome Completo *" required value={formData.name} onChange={handleChange} />
@@ -132,70 +134,57 @@ export default function Modal_UserForm({ open, onOpenChange, onSave, existingUse
 
           <div className="grid grid-cols-2 gap-4">
             <AuthInput id="cpf" label="CPF" value={formData.cpf} onChange={handleChange} mask="999.999.999-99" />
-            
-            {/* INPUT DE TELEFONE COM BANDEIRA */}
+
+            {/* INPUT DE TELEFONE COM BANDEIRA - AGORA USANDO REACT-INTERNATIONAL-PHONE */}
             <div className="space-y-1.5">
-                <Label htmlFor="phone">Celular (Whatsapp)</Label>
-                <div className="flex w-full items-center gap-2">
-                    <div className="relative">
-                        <select
-                            className="h-10 w-[70px] appearance-none rounded-md border border-input bg-background px-2 py-2 text-lg ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer text-center"
-                            value={selectedDDI}
-                            onChange={handleCountryChange}
-                        >
-                            {countryCodes.map((country) => (
-                                <option key={country.name} value={country.code}>
-                                    {country.flag}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="flex-1"
-                        placeholder="+55 11 99999-9999"
-                    />
-                </div>
+              <Label htmlFor="phone">Celular (Whatsapp)</Label>
+              <div className="flex w-full items-center gap-2">
+                <PhoneInput
+                  defaultCountry="br"
+                  value={formData.phone}
+                  onChange={(phone) => setFormData(prev => ({ ...prev, phone }))}
+                  inputClassName="flex-1 !w-full !h-10 !text-base !bg-background !border-input !rounded-md"
+                  containerClassName="!w-full"
+                />
+              </div>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-                <Label>Função</Label>
-                <Select value={formData.role} onValueChange={(v) => handleSelectChange('role', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="ADMIN">Admin (Dono)</SelectItem>
-                        <SelectItem value="USER">Usuário Comum</SelectItem>
-                    </SelectContent>
-                </Select>
+              <Label>Função</Label>
+              <Select value={formData.role} onValueChange={(v) => handleSelectChange('role', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADMIN">Admin (Dono)</SelectItem>
+                  <SelectItem value="USER">Usuário Comum</SelectItem>
+                  {formData.role === 'SUPER_ADMIN' && <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={formData.status} onValueChange={(v) => handleSelectChange('status', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="ACTIVE">Ativo</SelectItem>
-                        <SelectItem value="INACTIVE">Inativo</SelectItem>
-                        <SelectItem value="BLOCKED">Bloqueado</SelectItem>
-                    </SelectContent>
-                </Select>
+              <Label>Status</Label>
+              <Select value={formData.status} onValueChange={(v) => handleSelectChange('status', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">Ativo</SelectItem>
+                  <SelectItem value="INACTIVE">Inativo</SelectItem>
+                  <SelectItem value="BLOCKED">Bloqueado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           {/* Campo de Senha */}
           <div className="pt-2">
-             <AuthInput 
-                id="password" 
-                label={existingUser ? "Nova Senha (Opcional)" : "Senha Inicial *"} 
-                type="password" 
-                value={formData.password} 
-                onChange={handleChange} 
-                placeholder={existingUser ? "Deixe em branco para manter a atual" : "Mínimo 6 caracteres"}
-             />
+            <AuthInput
+              id="password"
+              label={existingUser ? "Nova Senha (Opcional)" : "Senha Inicial *"}
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder={existingUser ? "Deixe em branco para manter a atual" : "Mínimo 6 caracteres"}
+            />
           </div>
 
           {error && <p className="text-sm text-red-600 font-medium text-center bg-red-50 p-2 rounded">{error}</p>}
